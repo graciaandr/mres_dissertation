@@ -1,0 +1,6 @@
+data*
+scratch*
+.RData
+.Rhistory
+*.sav
+figures*
