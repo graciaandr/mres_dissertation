@@ -4,3 +4,4 @@ scratch*
 .Rhistory
 *.sav
 figures*
+clinical_measures.*
