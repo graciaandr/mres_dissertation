@@ -1,0 +1,219 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+### PURPOSE
+
+To demonstrate how to work with arrayed UK Biobank files
+
+### Setup
+```{r}
+
+
+#install.packages("tidyverse")
+#install.packages("data.table")
+
+library(tidyverse)
+library(data.table)
+
+
+# How to show the documentation for the function
+?fread
+
+```
+#---------------------------------
+
+### BEGIN
+
+### 1. Start with dates field
+```{r}
+
+# This is a good way to have a complete participant list
+
+all_f.eids <- fread("~/Documents/UKB Data/f.53.tab")  %>%                       
+                  select(f.eid)
+
+dim(all_f.eids)
+# 502411      1
+```
+
+### 2. Read the coding table
+```{r}
+
+## ICD 10
+
+# The coding reference table
+coding19<-     fread("~/Documents/UKB Data/coding19.tsv") %>% 
+                   select(coding, meaning)
+```
+
+
+### 3. Read data inputs
+```{r}
+
+# File containing codes
+
+code_records<- fread("~/Documents/UKB Data/f.41270.tab") 
+
+# Show the size of the object (rows, cols)
+dim(code_records)
+# 502411    244
+ 
+
+# File containing dates
+
+date_records<- fread("~/Documents/UKB Data/f.41280.tab") 
+
+dim(date_records)
+# 502411    244
+
+
+# These two fields are companions, they are intended to join by f.eid and array index
+```
+
+### 4. Reshape coding file from wide file to long format
+```{r}
+## Convert both code records and date records to long format
+## we have multiple records per person.
+
+codes_long<- code_records %>%                    
+               melt(id.vars = "f.eid") %>%     # Convert wide format to long format (retain f.eid)
+              .[value != ""]                   # Filter out empty space (this is a data.table filter)
+
+dim(codes_long)
+
+# 6302095       3
+```
+
+I'm really sorry for mixing data.table filters with tidyverse syntax, its just that data.table functions work a lot better with large objects
+
+### 5. Filter only to our desired codes
+```{r}
+mini<- codes_long[value %like% "C50|D05"] 
+
+dim(mini)
+
+# 25712     3
+
+# How many unique people?
+length(unique(mini$f.eid)) 
+
+# 19864
+```
+
+
+```{r}
+## Extract index array (needed for joining)
+
+mini<- mini %>% mutate(array_idx= str_sub(variable, 8)) %>%
+                rename(coding= value) %>%
+                select(-variable)
+```
+
+### 6. Optional enrich with meaning text
+```{r}
+## Join with coding table (enrich with meanings)
+
+mini<- left_join(mini, coding19)
+
+head(mini)
+
+#      f.eid coding array_idx                              meaning
+# 1: 1000874   C509      .0.0            C50.9 Breast, unspecified
+# 2: 1001025   C509      .0.0            C50.9 Breast, unspecified
+# 3: 1001241   C509      .0.0            C50.9 Breast, unspecified
+# 4: 1001262   C504      .0.0 C50.4 Upper-outer quadrant of breast
+# 5: 1001359   C509      .0.0            C50.9 Breast, unspecified
+# 6: 1002125   C504      .0.0 C50.4 Upper-outer quadrant of breast
+```
+
+
+### 7. Reshape dates (wide to long)
+
+```{r}
+dates_long<-  date_records %>% 
+                   melt(id.vars = "f.eid") %>%                  # Convert wide format to long format
+                   .[!is.na(value)] %>%                         # filter out empty space
+                   mutate(array_idx= str_sub(variable, 8),      # extract array index for joining
+                               date= ymd(value)) %>%            # convert text to date
+                   select(-variable)
+
+head(dates_long)
+#      f.eid      value array_idx       date
+# 1: 1000874 1997-04-15      .0.0 1997-04-15
+# 2: 1000923 2010-06-28      .0.0 2010-06-28
+# 3: 1001025 1998-06-28      .0.0 1998-06-28
+# 4: 1001241 2013-10-15      .0.0 2013-10-15
+# 5: 1001262 1999-08-26      .0.0 1999-08-26
+# 6: 1001359 2000-10-30      .0.0 2000-10-30
+```
+
+
+### 8. Combine codes and dates
+```{r}
+# Combine codes with dates
+
+combined<- inner_join(mini, dates_long); 
+dim(combined)
+# 25712     6
+
+length(unique(combined$f.eid))
+# 19864
+```
+### 9. Find the minimum date
+```{r}
+
+# Find first occurrence of either C50 or D05
+# And to create One row per person
+
+t0<- combined %>% 
+  group_by(f.eid) %>% 
+  summarise(minDate= min(date)) %>%
+  mutate(status= 1)
+
+head(t0)
+
+
+#     f.eid minDate    status
+#     <int> <date>      <dbl>
+# 1 1000874 1997-04-15      1
+# 2 1000923 2001-11-22      1
+# 3 1001025 1998-06-28      1
+# 4 1001241 2013-10-15      1
+# 5 1001262 1999-08-26      1
+# 6 1001359 2000-10-30      1
+```
+### 10. Create output object
+```{r}
+out<- full_join(all_f.eids, t0) %>%
+      set_names(c("f.eid", "Breast_date", "Breast_status")) %>%
+      mutate(Breast_status= ifelse(is.na(Breast_status), 0, Breast_status))
+
+head(out)
+#      f.eid Breast_date Breast_status
+# 1: 6026576        <NA>             0
+# 2: 6026582        <NA>             0
+# 3: 1000018        <NA>             0
+# 4: 1000020        <NA>             0
+# 5: 1000034        <NA>             0
+# 6: 1000041        <NA>             0
+
+
+sum(out$Breast_status)
+ 
+# 19864
+```
+
+
+#=====================
+### SAVE
+```{r}
+saveRDS(out, "Breast_status.rds")
+
+write_tsv(out, "Breast_status.tsv")
+```
+
+#-----------------------
+
+# END
