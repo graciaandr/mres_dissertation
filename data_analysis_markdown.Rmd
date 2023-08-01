@@ -1,0 +1,454 @@
+---
+title: "Data Preprocessing and Analysis for MRes Project"
+author: "Gracia Andriamiadana"
+date: "26/07/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(data.table)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+setwd("/Users/BHCadmin/Documents/mres_gracia/")
+```
+
+## Load and edit data tables
+
+```{r}
+names(demographic_table)
+demographic_table <- read.csv("upd_demographics_table_UKB_data.tsv", header = T, sep = "\t")
+diabetes_tbl = read.csv("diabetes_patients_in_UKB.tsv", sep = "\t")
+stroke_tbl = read.csv("stroke_patients_in_UKB.tsv", sep = "\t")
+hypertension_tbl = read.csv("hypertension_patients_in_UKB.tsv", sep = "\t")
+cholesterol_tbl = read.csv("cholesterol_patients_in_UKB.tsv", sep = "\t")
+IHD_tbl = read.csv("IHD_patients_in_UKB.tsv", sep = "\t")
+non_IHD_tbl = read.csv("non_IHD_patients_in_UKB.tsv", sep = "\t")
+HF_tbl = read.csv("heart_failure_patients_in_UKB.tsv", sep = "\t")
+HA_tbl = read.csv("heart_attack_patients_in_UKB.tsv", sep = "\t")
+pericardial_tbl <- read.csv("pericardial_patients_in_UKB.tsv", sep = "\t")
+BC_tbl = read.csv("BC_patients_in_UKB.tsv", sep = "\t")
+sum(BC_tbl$BC_status)
+
+RT_tbl = read.csv("RT_patients_in_UKB.tsv", sep = "\t")
+RT_tbl$RT_status <- NULL
+RT_tbl$RT_status <- ifelse(RT_tbl$RT_date_icd10 == '' & RT_tbl$RT_date_opcs4 == '', 0, 1) 
+# length(unique(RT_tbl$f.eid)) == nrow(RT_tbl) 
+sum(RT_tbl$RT_status)
+
+```
+
+```{r demographics_whole_sample}
+
+# calculate average and median age of whole sample
+mean(demographic_table$age_at_recruitment, na.rm = T)
+median(demographic_table$age_at_recruitment, na.rm = T)
+
+table(demographic_table$ethnicity_at_recruitment)
+
+mean(demographic_table$deprivation_index, na.rm = T)
+median(demographic_table$deprivation_index, na.rm = T)
+
+(table(demographic_table$alc_intake_at_recruitment))
+
+(table(demographic_table$smoking_status_at_recruitment))
+max(table(demographic_table$smoking_status_at_recruitment))
+
+mean(demographic_table$mets_imaging_visit1, na.rm = T)
+median(demographic_table$mets_imaging_visit1, na.rm = T)
+```
+```{r}
+
+nrow(diabetes_tbl)
+diabetes_tbl <- diabetes_tbl %>% group_by(f.eid) %>%
+  summarise(diabetes_status = max(diabetes_status, na.rm= TRUE),
+            date_insulin_diabetes = min(date_insulin_diabetes, na.rm= TRUE),
+            date_malnutrition_diabetes = min(date_malnutrition_diabetes, na.rm= TRUE),
+            date_non_insulin_diabetes = min(date_non_insulin_diabetes, na.rm = TRUE),
+            date_other_spec_diabetes = min(date_other_spec_diabetes, na.rm = TRUE),
+            date_other_unspec_diabetes = min(date_other_unspec_diabetes, na.rm = T)
+            )
+nrow(diabetes_tbl)
+
+names(hypertension_tbl)
+hypertension_tbl <- hypertension_tbl %>% group_by(f.eid) %>%
+  summarise(date_hypertension = min(date_hypertension), 
+            hypertension_status = max(hypertension_status)
+  )
+  
+names(cholesterol_tbl)
+cholesterol_tbl <- cholesterol_tbl %>% group_by(f.eid) %>%
+  summarise(date_lipidaemia = min(date_lipidaemia),
+            date_lipidaemia = min(date_lipidaemia),
+            date_lipidaemia = min(date_lipidaemia),
+            cholesterol_status = max(cholesterol_status)
+  )
+
+
+names(IHD_tbl)
+IHD_tbl <- IHD_tbl %>% group_by(f.eid) %>% 
+  summarise(IHD_status = max(IHD_status,na.rm = T),
+            date_angina_pec = min(date_angina_pec),
+            date_chronic_iscHD = min(date_chronic_iscHD),
+            date_other_iscHD = min(date_other_iscHD)
+            )
+
+stroke_tbl <- stroke_tbl %>% group_by(f.eid) %>%
+  summarise(Stroke_Status = max(Stroke_Status, na.rm = T),
+            date_stroke = max(date_stroke, na.rm = T), 
+            date_stroke_42006 = max(date_stroke_42006, na.rm = T), 
+            date_isch_stroke_42008 = max(date_isch_stroke_42008, na.rm = T),
+            date_cerebral_infarction = max(date_cerebral_infarction, na.rm = T), 
+            date_intracerebral_haemorrhage = max(date_intracerebral_haemorrhage, na.rm = T),
+            date_intracerebral_haemorrhage_42010 = max(date_intracerebral_haemorrhage_42010, na.rm = T),
+            date_other_intracerebral_haemorrhage = max(date_other_intracerebral_haemorrhage, na.rm = T))
+
+names(HF_tbl)
+HF_tbl <- HF_tbl %>% group_by(f.eid) %>%
+  summarise(HF_status = max(HF_status),
+            date_HF = min(date_HF))
+
+names(non_IHD_tbl)
+non_IHD_tbl <- non_IHD_tbl %>% group_by(f.eid) %>% 
+  summarise(non_IHD_status = max(non_IHD_status,na.rm = T),
+            date_cardiomyopathy = min(date_cardiomyopathy),
+            date_cardiomyopathy_elsewhere = min(date_cardiomyopathy_elsewhere),
+            date_hypertensive_HD = min(date_hypertensive_HD),
+            date_hypertensive_HD_and_RD = min(date_hypertensive_HD_and_RD),
+            )
+names(HA_tbl)
+
+pericardial_tbl <- pericardial_tbl %>% group_by(f.eid) %>%
+  summarise(pericard_status = max(pericard_status),
+            date_pericard = min(pericard_date))
+
+HA_tbl <- HA_tbl %>% group_by(f.eid) %>%
+  summarise(HA_status = max(HA_status),
+            date_acute_HA = min(date_acute_HA),
+            date_subseq_HA = min(date_subseq_HA),
+            date_complications_after_HA = min(date_complications_after_HA),
+            date_myo_infarction_HA = min(date_myo_infarction_HA),
+            )
+#put all data frames into list
+df_list <- list(demographic_table, 
+                diabetes_tbl, hypertension_tbl, cholesterol_tbl,
+                IHD_tbl, non_IHD_tbl, HF_tbl, stroke_tbl, pericardial_tbl, HA_tbl)
+
+#merge all data frames in list
+sample_df <- df_list %>% reduce(full_join, by='f.eid')
+head(sample_df, 10)
+
+length(unique(sample_df$f.eid)) == nrow(sample_df)
+# write.table(sample_df, file = "analysis_sample_UKB_patients.tsv", sep = "\t")
+```
+
+```{r whole_sample}
+
+cat("No of diabetes patients in whole sample:", sum(sample_df$diabetes_status), "\n")
+cat("No of hypertension patients in whole sample:", sum(sample_df$hypertension_status), "\n")
+cat("No of cholesterol patients in whole sample:", sum(sample_df$cholesterol_status), "\n")
+
+print("--------")
+cat("No of Stroke patients in whole sample:", sum(sample_df$Stroke_Status), "\n")
+cat("No of IHD patients in whole sample:", sum(sample_df$IHD_status), "\n")
+cat("No of non IHD patients in whole sample:", sum(sample_df$non_IHD_status), "\n")
+cat("No of HF patients in whole sample:", sum(sample_df$HF_status), "\n")
+cat("No of HA patients in whole sample:", sum(sample_df$HA_status), "\n")
+
+```
+
+```{r BC_sample}
+
+BC_ids <- BC_tbl %>% dplyr::filter(BC_status == 1) %>% select(f.eid)
+nrow(BC_ids)
+BC_ids <- as.vector(BC_ids$f.eid)
+
+
+dim(diabetes_tbl)
+diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+dim(diabetes_tbl)
+
+test_df <- diabetes_tbl_BC %>% group_by(f.eid) %>% 
+  summarise(diabetes_status = max(diabetes_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+
+cat("No of diabetes patients in BC sample:", sum(test_df$diabetes_status), "\n")
+
+stroke_tbl_BC <- stroke_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+
+test_df <- stroke_tbl_BC %>% group_by(f.eid) %>% 
+  summarise(Stroke_Status = max(Stroke_Status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of Stroke patients in BC sample:", sum(test_df$Stroke_Status), "\n")
+
+hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+
+test_df <- hypertension_tbl_BC %>% group_by(f.eid) %>% 
+  summarise(hypertension_status = max(hypertension_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of hypertension patients in BC sample:", sum(test_df$hypertension_status), "\n")
+
+cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+
+test_df <- cholesterol_tbl_BC %>% group_by(f.eid) %>% 
+  summarise(cholesterol_status = max(cholesterol_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of cholesterol patients in BC sample:", sum(test_df$cholesterol_status), "\n")
+
+IHD_tbl_BC <- IHD_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+
+test_df <- IHD_tbl_BC %>% group_by(f.eid) %>% 
+  summarise(IHD_status = max(IHD_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of IHD patients in BC sample:", sum(test_df$IHD_status), "\n")
+
+non_IHD_tbl_BC <- non_IHD_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+
+test_df <- non_IHD_tbl_BC %>% group_by(f.eid) %>% 
+  summarise(non_IHD_status = max(non_IHD_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of non IHD patients in BC sample:", sum(test_df$non_IHD_status), "\n")
+
+HF_tbl_BC <- HF_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+
+test_df <- HF_tbl_BC %>% group_by(f.eid) %>% 
+  summarise(HF_status = max(HF_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of HF patients in BC sample:", sum(test_df$HF_status), "\n")
+
+HA_tbl_BC <- HA_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+
+test_df <- HA_tbl_BC %>% group_by(f.eid) %>% 
+  summarise(HA_status = max(HA_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of HA patients in BC sample:", sum(test_df$HA_status), "\n")
+
+```
+
+```{r non_BC_sample}
+non_BC_ids <- BC_tbl %>% dplyr::filter(BC_status == 0) %>% select(f.eid)
+nrow(non_BC_ids)
+non_BC_ids <- as.vector(non_BC_ids$f.eid)
+
+
+dim(diabetes_tbl)
+diabetes_tbl_no_BC <- diabetes_tbl %>% dplyr::filter((f.eid %in% non_BC_ids))
+dim(diabetes_tbl_no_BC)
+
+test_df <- diabetes_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(diabetes_status = max(diabetes_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+
+cat("No of diabetes patients in no BC sample:", sum(test_df$diabetes_status), "\n")
+
+stroke_tbl_no_BC <- stroke_tbl %>% dplyr::filter((f.eid %in% non_BC_ids))
+
+test_df <- stroke_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(Stroke_Status = max(Stroke_Status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of Stroke patients in no BC sample:", sum(test_df$Stroke_Status), "\n")
+
+hypertension_tbl_no_BC <- hypertension_tbl %>% dplyr::filter((f.eid %in% non_BC_ids))
+
+test_df <- hypertension_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(hypertension_status = max(hypertension_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of hypertension patients in no BC sample:", sum(test_df$hypertension_status), "\n")
+
+cholesterol_tbl_no_BC <- cholesterol_tbl %>% dplyr::filter((f.eid %in% non_BC_ids))
+
+test_df <- cholesterol_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(cholesterol_status = max(cholesterol_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of cholesterol patients in no BC sample:", sum(test_df$cholesterol_status), "\n")
+
+IHD_tbl_no_BC <- IHD_tbl %>% dplyr::filter((f.eid %in% non_BC_ids))
+
+test_df <- IHD_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(IHD_status = max(IHD_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of IHD patients in no BC sample:", sum(test_df$IHD_status), "\n")
+
+non_IHD_tbl_no_BC <- non_IHD_tbl %>% dplyr::filter((f.eid %in% non_BC_ids))
+
+test_df <- non_IHD_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(non_IHD_status = max(non_IHD_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of non IHD patients in no BC sample:", sum(test_df$non_IHD_status), "\n")
+
+HF_tbl_no_BC <- HF_tbl %>% dplyr::filter((f.eid %in% non_BC_ids))
+
+test_df <- HF_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(HF_status = max(HF_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of HF patients in no BC sample:", sum(test_df$HF_status), "\n")
+
+HA_tbl_no_BC <- HA_tbl %>% dplyr::filter((f.eid %in% non_BC_ids))
+
+test_df <- HA_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(HA_status = max(HA_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of HA patients in no BC sample:", sum(test_df$HA_status), "\n")
+
+```
+
+
+```{r HIER}
+RT_ids <- RT_tbl %>% dplyr::filter(RT_status == 1) %>% select(f.eid)
+nrow(RT_ids)
+
+RT_and_BC_ids <- intersect(as.vector(BC_ids), as.vector(RT_ids$f.eid))
+length(RT_and_BC_ids)
+
+no_RT_ids <- RT_tbl %>% dplyr::filter(RT_status == 0) %>% select(f.eid)
+no_RT_and_BC_ids <- intersect(as.vector(BC_ids), as.vector(no_RT_ids$f.eid))
+length(no_RT_and_BC_ids)
+```
+
+```{r BC_and_RT_sample}
+
+dim(diabetes_tbl)
+diabetes_tbl_RT_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+dim(diabetes_tbl)
+
+test_df <- diabetes_tbl_RT_BC %>% group_by(f.eid) %>% 
+  summarise(diabetes_status = max(diabetes_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+
+cat("No of diabetes patients in RT and BC sample:", sum(test_df$diabetes_status), "\n")
+
+stroke_tbl_RT_BC <- stroke_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+
+test_df <- stroke_tbl_RT_BC %>% group_by(f.eid) %>% 
+  summarise(Stroke_Status = max(Stroke_Status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of Stroke patients in RT and BC sample:", sum(test_df$Stroke_Status), "\n")
+
+hypertension_tbl_RT_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+
+test_df <- hypertension_tbl_RT_BC %>% group_by(f.eid) %>% 
+  summarise(hypertension_status = max(hypertension_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of hypertension patients in RT and BC sample:", sum(test_df$hypertension_status), "\n")
+
+cholesterol_tbl_RT_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+
+test_df <- cholesterol_tbl_RT_BC %>% group_by(f.eid) %>% 
+  summarise(cholesterol_status = max(cholesterol_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of cholesterol patients in RT and BC sample:", sum(test_df$cholesterol_status), "\n")
+
+IHD_tbl_RT_BC <- IHD_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+
+test_df <- IHD_tbl_RT_BC %>% group_by(f.eid) %>% 
+  summarise(IHD_status = max(IHD_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of IHD patients in RT and BC sample:", sum(test_df$IHD_status), "\n")
+
+non_IHD_tbl_RT_BC <- non_IHD_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+
+test_df <- non_IHD_tbl_RT_BC %>% group_by(f.eid) %>% 
+  summarise(non_IHD_status = max(non_IHD_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of non IHD patients in RT and BC sample:", sum(test_df$non_IHD_status), "\n")
+
+HF_tbl_RT_BC <- HF_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+
+test_df <- HF_tbl_RT_BC %>% group_by(f.eid) %>% 
+  summarise(HF_status = max(HF_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of HF patients in RT and BC sample:", sum(test_df$HF_status), "\n")
+
+HA_tbl_RT_BC <- HA_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+
+test_df <- HA_tbl_RT_BC %>% group_by(f.eid) %>% 
+  summarise(HA_status = max(HA_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of HA patients in BC sample:", sum(test_df$HA_status), "\n")
+
+```
+
+
+```{r no_BC_and_MRT_sample}
+
+dim(diabetes_tbl)
+diabetes_tbl_no_BC <- diabetes_tbl %>% dplyr::filter((f.eid %in% no_RT_and_BC_ids))
+dim(diabetes_tbl_no_BC)
+
+test_df <- diabetes_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(diabetes_status = max(diabetes_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+
+cat("No of diabetes patients in no RT_and_BC sample:", sum(test_df$diabetes_status), "\n")
+
+stroke_tbl_no_BC <- stroke_tbl %>% dplyr::filter((f.eid %in% no_RT_and_BC_ids))
+
+test_df <- stroke_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(Stroke_Status = max(Stroke_Status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of Stroke patients in no RT & BC sample:", sum(test_df$Stroke_Status), "\n")
+
+hypertension_tbl_no_BC <- hypertension_tbl %>% dplyr::filter((f.eid %in% no_RT_and_BC_ids))
+
+test_df <- hypertension_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(hypertension_status = max(hypertension_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of hypertension patients in no RT & BC sample:", sum(test_df$hypertension_status), "\n")
+
+cholesterol_tbl_no_BC <- cholesterol_tbl %>% dplyr::filter((f.eid %in% no_RT_and_BC_ids))
+
+test_df <- cholesterol_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(cholesterol_status = max(cholesterol_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of cholesterol patients in no RT & BC sample:", sum(test_df$cholesterol_status), "\n")
+
+IHD_tbl_no_BC <- IHD_tbl %>% dplyr::filter((f.eid %in% no_RT_and_BC_ids))
+
+test_df <- IHD_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(IHD_status = max(IHD_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of IHD patients in no RT & BC sample:", sum(test_df$IHD_status), "\n")
+
+non_IHD_tbl_no_BC <- non_IHD_tbl %>% dplyr::filter((f.eid %in% no_RT_and_BC_ids))
+
+test_df <- non_IHD_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(non_IHD_status = max(non_IHD_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of non IHD patients in no RT & BC sample:", sum(test_df$non_IHD_status), "\n")
+
+HF_tbl_no_BC <- HF_tbl %>% dplyr::filter((f.eid %in% no_RT_and_BC_ids))
+
+test_df <- HF_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(HF_status = max(HF_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of HF patients in no RT & BC sample:", sum(test_df$HF_status), "\n")
+
+HA_tbl_no_BC <- HA_tbl %>% dplyr::filter((f.eid %in% no_RT_and_BC_ids))
+
+test_df <- HA_tbl_no_BC %>% group_by(f.eid) %>% 
+  summarise(HA_status = max(HA_status, na.rm= TRUE))
+# length(unique(test_df$f.eid)) == nrow(test_df) 
+cat("No of HA patients in no RT & BC sample:", sum(test_df$HA_status), "\n")
+
+```
+
+```{r experimenting, include=FALSE}
+IHD_tbl$date_angina_pec <- as.POSIXct( (IHD_tbl$date_angina_pec),
+                                       format = "%Y-%m-%d %H:%M:%S", tz = "GMT")
+IHD_tbl$date_other_iscHD <- as.POSIXct( (IHD_tbl$date_other_iscHD),
+                                       format = "%Y-%m-%d %H:%M:%S", tz = "GMT")
+IHD_tbl$date_chronic_iscHD <- as.POSIXct( (IHD_tbl$date_chronic_iscHD),
+                                       format = "%Y-%m-%d %H:%M:%S", tz = "GMT")
+IHD_tbl
+```
+
+## Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+?as.POSIXct
+```
