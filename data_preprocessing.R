@@ -2,7 +2,6 @@ library(dplyr)
 library(magrittr)
 library(data.table)
 library(tidyr)
-library(ggplot2)
 library(stringr)
 
 setwd("/workspace/home/gandriamiadana/mres_dissertation/")
@@ -158,9 +157,9 @@ write.table(all_bcs_patients, file = "only_BC_patients_icd_and_opcs.tsv", sep = 
 #
 
 # ---------------------------------------------------------------------------------------
-# RT_vector_clinical_codes_icds <- icds %>% filter(icds$clinical_code %in% RT_icd_codes) ## remove ICD codes that do not code BC but RT 
-# RT_vector_clinical_codes_opcs4 <- opcs4s %>% filter(!opcs4s$clinical_code %in% bc_opcs4_codes)
-RT_vector_clinical_codes <- c(RT_vector_clinical_codes_icds$clinical_code, RT_vector_clinical_codes_opcs4$clinical_code)
+RT_vector_clinical_codes_icds <- icds %>% filter(icds$clinical_code %in% RT_icd_codes) ## remove ICD codes that do not code BC but RT 
+RT_vector_clinical_codes_opcs4 <- opcs4s %>% filter(!opcs4s$clinical_code %in% bc_opcs4_codes)
+# RT_vector_clinical_codes <- c(RT_vector_clinical_codes_icds$clinical_code, RT_vector_clinical_codes_opcs4$clinical_code)
 RT_vector_clinical_codes <- c(RT_icd_codes, RT_vector_clinical_codes_opcs4$clinical_code)
 RT_updated_vector_clinical_codes <- sprintf(paste0(RT_vector_clinical_codes, collapse = '|'))
 print(RT_updated_vector_clinical_codes)
@@ -202,7 +201,7 @@ out_icd10 <- full_join(all_f.eids_icd10, t0_icd10) %>%
       mutate(RT_status= ifelse(is.na(RT_status), 0, RT_status))
 
 write.table(combined_icd10, file = "all_RT_sessions_icd10.tsv", sep = "\t")
-write.table(combined_icd10, file = "RT_status_icd10.tsv", sep = "\t")
+write.table(out_icd10, file = "RT_status_icd10.tsv", sep = "\t")
 
 combined_opcs4 <- inner_join(mini_opcs4, dates_long_opcs4); 
 t0_opcs4 <- combined_opcs4 %>%                   ### table of all breast cancer patients, with columns of 
@@ -222,7 +221,7 @@ filt_all_RT_patients <- all_RT_patients %>% filter(RT_status == 1)
 dim(filt_all_RT_patients)
 length(unique(filt_all_RT_patients$f.eid)) 
 
-write.table(all_RT_patients, file = "only_BC_patients_icd_and_opcs.tsv", sep = "\t")
+write.table(all_RT_patients, file = "only_RT_patients_icd_and_opcs.tsv", sep = "\t")
 
 ### 22654 bzw laut python script 22896 including in situ
 # now 25124
