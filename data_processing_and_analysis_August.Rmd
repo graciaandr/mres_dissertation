@@ -1,0 +1,87 @@
+---
+title: "Descriptive Statistics and Data Analysis"
+author: "Gracia Andriamiadana"
+date: "02/08/2023"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(data.table)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+setwd("/Users/BHCadmin/Documents/mres_gracia/")
+source(file = "functions_for_data_processing.R")
+```
+
+## Load and edit data tables
+```{r}
+BC_tbl = read.csv("BC_patients_in_UKB.tsv", sep = "\t")
+sum(BC_tbl$BC_status)
+
+RT_tbl = read.csv("RT_patients_in_UKB.tsv", sep = "\t")
+RT_tbl$RT_status <- NULL
+RT_tbl$RT_status <- ifelse(RT_tbl$RT_date_icd10 == '' & RT_tbl$RT_date_opcs4 == '', 0, 1) 
+# length(unique(RT_tbl$f.eid)) == nrow(RT_tbl) 
+sum(RT_tbl$RT_status)
+
+demographic_table <- read.csv("upd_demographics_table_UKB_data.tsv", header = T, sep = "\t")
+diabetes_tbl = read.csv("summarised_diabetes_patients_in_UKB.tsv", sep = "\t")
+stroke_tbl = read.csv("summarised_stroke_patients_in_UKB.tsv", sep = "\t")
+hypertension_tbl = read.csv("summarised_hypertension_patients_in_UKB.tsv", sep = "\t")
+cholesterol_tbl = read.csv("summarised_cholesterol_patients_in_UKB.tsv", sep = "\t")
+IHD_tbl = read.csv("summarised_IHD_patients_in_UKB.tsv", sep = "\t")
+non_IHD_tbl = read.csv("summarised_non_IHD_patients_in_UKB.tsv", sep = "\t")
+HF_tbl = read.csv("summarised_heart_failure_patients_in_UKB.tsv", sep = "\t")
+HA_tbl = read.csv("summarised_heart_attack_patients_in_UKB.tsv", sep = "\t")
+pericardial_tbl <- read.csv("summarised_pericardial_patients_in_UKB.tsv", sep = "\t")
+sample_df <- read.csv("analysis_sample_UKB_patients.tsv", sep = "\t")
+```
+```{r prevalent_incident_cases}
+names(pericardial_tbl)
+# merge_date_columns(sample_df = sample_df, df_tbl = pericardial_tbl, status_col = "pericard_status")
+
+status_col = "pericard_status"
+t0<- pericardial_tbl %>% gather(key, value, -c(f.eid, status_col)) %>% 
+    mutate(date= str_sub(value, 1, 10) %>% ymd())
+  
+print(head(t0))
+  
+t1<- t0 %>% group_by(f.eid, across(status_col)) %>% summarise(minDate= min(date, na.rm=TRUE))
+t1$minDate <- ymd(t1$minDate)
+
+temp_df <- sample_df %>% select(f.eid, recruitment_date) 
+temp_df$recruitment_date <- ymd(temp_df$recruitment_date)
+temp_df
+  
+t2 <- full_join(temp_df, t1)
+t3 %>% mutate(prevalent_status = minDate <= recruitment_date,
+                incident_status = minDate > recruitment_date)
+```
+
+
+```{r demographics_whole_sample}
+
+# calculate average and median age of whole sample
+mean(demographic_table$age_at_recruitment, na.rm = T)
+median(demographic_table$age_at_recruitment, na.rm = T)
+
+table(demographic_table$ethnicity_at_recruitment)
+
+mean(demographic_table$deprivation_index, na.rm = T)
+median(demographic_table$deprivation_index, na.rm = T)
+
+(table(demographic_table$alc_intake_at_recruitment))
+
+(table(demographic_table$smoking_status_at_recruitment))
+max(table(demographic_table$smoking_status_at_recruitment))
+
+mean(demographic_table$mets_imaging_visit1, na.rm = T)
+median(demographic_table$mets_imaging_visit1, na.rm = T)
+```
+
+### read more about gather function!
+
