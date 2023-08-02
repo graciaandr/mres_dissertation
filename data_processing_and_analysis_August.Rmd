@@ -40,17 +40,53 @@ HA_tbl = read.csv("summarised_heart_attack_patients_in_UKB.tsv", sep = "\t")
 pericardial_tbl <- read.csv("summarised_pericardial_patients_in_UKB.tsv", sep = "\t")
 sample_df <- read.csv("analysis_sample_UKB_patients.tsv", sep = "\t")
 ```
+```{r}
+ 
+# t0<- stroke_tbl %>% gather(key, value, -c(f.eid, Stroke_Status)) %>% 
+#                              mutate(date= str_sub(value, 1, 10) %>% ymd())
+t0<- cholesterol_tbl %>% gather(key, value, -c(f.eid, cholesterol_status)) %>% 
+                             mutate(date= str_sub(value, 1, 10) %>% lubridate::ymd())
+t0
+
+t0 <- t0 %>% select(f.eid, cholesterol_status, date)
+
+t1 <- t0 %>% group_by(f.eid, cholesterol_status) %>% summarise(minDate= min(date))
+
+# tx <- cholesterol_tbl %>% group_by(f.eid, cholesterol_status) %>%
+#   summarise(date_lipidaemia = min(date_lipidaemia),
+#   )
+# 
+# head(tx)
+
+
+# t1<- t0 %>% group_by(f.eid, cholesterol_status) %>% summarise(minDate= min(date, na.rm=TRUE))
+t1$minDate <- ymd(t1$minDate)
+
+t1                                  
+
+View(t1)
+
+temp_df <- sample_df %>% select(f.eid, recruitment_date) 
+temp_df$recruitment_date <- ymd(temp_df$recruitment_date)
+temp_df
+t2 <- full_join(temp_df, t1)
+t2
+t2 %>% filter(minDate <= recruitment_date)
+
+t3 <- t2 %>% mutate(prevalent_status = minDate <= recruitment_date,
+              incident_status = minDate > recruitment_date)
+head(t3)
+```
+
+
 ```{r prevalent_incident_cases}
 names(pericardial_tbl)
-# merge_date_columns(sample_df = sample_df, df_tbl = pericardial_tbl, status_col = "pericard_status")
-
-status_col = "pericard_status"
-t0<- pericardial_tbl %>% gather(key, value, -c(f.eid, status_col)) %>% 
+t0<- pericardial_tbl %>% gather(key, value, -c(f.eid, pericard_status)) %>% 
     mutate(date= str_sub(value, 1, 10) %>% ymd())
   
 print(head(t0))
   
-t1<- t0 %>% group_by(f.eid, across(status_col)) %>% summarise(minDate= min(date, na.rm=TRUE))
+t1<- t0 %>% group_by(f.eid, (pericard_status)) %>% summarise(minDate= min(date, na.rm=TRUE))
 t1$minDate <- ymd(t1$minDate)
 
 temp_df <- sample_df %>% select(f.eid, recruitment_date) 
@@ -58,8 +94,9 @@ temp_df$recruitment_date <- ymd(temp_df$recruitment_date)
 temp_df
   
 t2 <- full_join(temp_df, t1)
-t3 %>% mutate(prevalent_status = minDate <= recruitment_date,
-                incident_status = minDate > recruitment_date)
+t3 <- t2 %>% mutate(prevalent_status = minDate <= recruitment_date,
+              incident_status = minDate > recruitment_date)
+  
 ```
 
 
