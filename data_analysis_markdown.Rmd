@@ -1,5 +1,5 @@
 ---
-title: "Data Preprocessing and Analysis for MRes Project"
+title: "Data Preprocessing for MRes Project"
 author: "Gracia Andriamiadana"
 date: "26/07/2023"
 output: html_document
@@ -18,7 +18,6 @@ setwd("/Users/BHCadmin/Documents/mres_gracia/")
 ## Load and edit data tables
 
 ```{r}
-names(demographic_table)
 demographic_table <- read.csv("upd_demographics_table_UKB_data.tsv", header = T, sep = "\t")
 diabetes_tbl = read.csv("diabetes_patients_in_UKB.tsv", sep = "\t")
 stroke_tbl = read.csv("stroke_patients_in_UKB.tsv", sep = "\t")
@@ -59,6 +58,7 @@ max(table(demographic_table$smoking_status_at_recruitment))
 mean(demographic_table$mets_imaging_visit1, na.rm = T)
 median(demographic_table$mets_imaging_visit1, na.rm = T)
 ```
+
 ```{r}
 
 nrow(diabetes_tbl)
@@ -141,21 +141,75 @@ sample_df <- df_list %>% reduce(full_join, by='f.eid')
 head(sample_df, 10)
 
 length(unique(sample_df$f.eid)) == nrow(sample_df)
-# write.table(sample_df, file = "analysis_sample_UKB_patients.tsv", sep = "\t")
+write.table(diabetes_tbl, file = "summarised_diabetes_patients_in_UKB.tsv", sep = "\t")
+write.table(hypertension_tbl, file = "summarised_hypertension_patients_in_UKB.tsv", sep = "\t")
+write.table(cholesterol_tbl, file = "summarised_cholesterol_patients_in_UKB.tsv", sep = "\t")
+write.table(IHD_tbl, file = "summarised_IHD_patients_in_UKB.tsv", sep = "\t")
+write.table(non_IHD_tbl, file = "summarised_non_IHD_patients_in_UKB.tsv", sep = "\t")
+write.table(HF_tbl, file = "summarised_heart_failure_patients_in_UKB.tsv", sep = "\t")
+write.table(HA_tbl, file = "summarised_heart_attack_patients_in_UKB.tsv", sep = "\t")
+write.table(pericardial_tbl, file = "summarised_pericardial_patients_in_UKB.tsv", sep = "\t")
+write.table(stroke_tbl, file = "summarised_stroke_patients_in_UKB.tsv", sep = "\t")
+
+write.table(sample_df, file = "analysis_sample_UKB_patients.tsv", sep = "\t")
+
+```
+
+
+
+```{r}
+head(IHD_tbl)
+head(sample_df)
+stroke_tbl
+names(sample_df)
+View(stroke_tbl)
+
+### read more about gather function!
+t0<- stroke_tbl %>% gather(key, value, -c(f.eid, Stroke_Status)) %>% 
+                             mutate(date= str_sub(value, 1, 10) %>% ymd())
+t0
+
+
+t1<- t0 %>% group_by(f.eid, Stroke_Status) %>% summarise(minDate= min(date, na.rm=TRUE))
+t1$minDate <- ymd(t1$minDate)
+
+t1                                  
+
+View(t1)
+
+temp_df <- sample_df %>% select(f.eid, recruitment_date) 
+temp_df$recruitment_date <- ymd(temp_df$recruitment_date)
+temp_df
+t2 <- full_join(temp_df, t1)
+t2
+t2 %>% filter(minDate <= recruitment_date)
+
+```
+
+
+
+
+
+```{r}
+names(IHD_tbl)
+head(IHD_tbl)
+
+select(IHD_tbl, matches("date"))
+
+test_df <- IHD_tbl%>% select(matches("date")) 
+IHD_tbl %>% filter(names(test_df) < sample_df$recruitment_date)
 ```
 
 ```{r whole_sample}
-
 cat("No of diabetes patients in whole sample:", sum(sample_df$diabetes_status), "\n")
 cat("No of hypertension patients in whole sample:", sum(sample_df$hypertension_status), "\n")
 cat("No of cholesterol patients in whole sample:", sum(sample_df$cholesterol_status), "\n")
 
-print("--------")
-cat("No of Stroke patients in whole sample:", sum(sample_df$Stroke_Status), "\n")
-cat("No of IHD patients in whole sample:", sum(sample_df$IHD_status), "\n")
-cat("No of non IHD patients in whole sample:", sum(sample_df$non_IHD_status), "\n")
-cat("No of HF patients in whole sample:", sum(sample_df$HF_status), "\n")
-cat("No of HA patients in whole sample:", sum(sample_df$HA_status), "\n")
+names(stroke_tbl)
+cholesterol_at_baseline = sample_df %>% filter(date_stroke < recruitment_date) 
+sample_df %>% filter(date_cerebral_infarction > recruitment_date)
+sum(cholesterol_at_baseline$cholesterol_status)
+ids_cholesterol_at_baseline <- cholesterol_at_baseline$f.eid
 
 ```
 
@@ -434,6 +488,12 @@ cat("No of HA patients in no RT & BC sample:", sum(test_df$HA_status), "\n")
 
 ```
 
+```{r}
+sample_df %>% filter(date_acute_HA < recruitment_date)
+sample_df %>% filter(date_acute_HA >= recruitment_date)
+
+```
+
 ```{r experimenting, include=FALSE}
 IHD_tbl$date_angina_pec <- as.POSIXct( (IHD_tbl$date_angina_pec),
                                        format = "%Y-%m-%d %H:%M:%S", tz = "GMT")
@@ -442,6 +502,7 @@ IHD_tbl$date_other_iscHD <- as.POSIXct( (IHD_tbl$date_other_iscHD),
 IHD_tbl$date_chronic_iscHD <- as.POSIXct( (IHD_tbl$date_chronic_iscHD),
                                        format = "%Y-%m-%d %H:%M:%S", tz = "GMT")
 IHD_tbl
+
 ```
 
 ## Plots
