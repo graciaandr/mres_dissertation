@@ -13,12 +13,15 @@ library(data.table)
 library(dplyr)
 library(magrittr)
 library(ggplot2)
+library(lubridate)
 setwd("/Users/BHCadmin/Documents/mres_gracia/")
 source(file = "functions_for_data_processing.R")
 ```
 
 ## Load and edit data tables
 ```{r}
+setwd("/Users/BHCadmin/Documents/mres_gracia/")
+
 BC_tbl = read.csv("BC_patients_in_UKB.tsv", sep = "\t")
 sum(BC_tbl$BC_status)
 
@@ -43,8 +46,7 @@ sample_df <- read.csv("analysis_sample_UKB_patients.tsv", sep = "\t")
 View(sample_df)
 ```
 ```{r}
-library(dplyr)
-library(lubridate)
+
 
 tmp_stroke_tbl <- stroke_tbl %>% filter(Stroke_Status>0)
 nrow(tmp_stroke_tbl)
@@ -81,25 +83,45 @@ tmppp12
 View(tmppp12)
 ```
 
+```{r}
+
+t0<- non_IHD_tbl %>% gather(key, value, -c(f.eid, non_IHD_status)) %>%
+  mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+  select(f.eid, non_IHD_status, date) %>%
+  group_by(f.eid, non_IHD_status) # %>% summarise(minDate= min(date))
+View(t0)
+
+t0$date <- ymd(t0$date)
+
+View(t0)
+tmp0 <- t0  %>% summarise(minDate= min(date))
+tmp0  %>% filter(non_IHD_status>0)
+
+# tmp01 <- t0  %>% summarise(minDate= min(date, na.rm = T))
+# tmp01  %>% filter(non_IHD_status>0)
+
+```
 
 
 ```{r relabelling_cases}
  
-t0<- stroke_tbl %>% gather(key, value, -c(f.eid, Stroke_Status)) %>%
-  mutate(date= str_sub(value, 1, 10) %>% ymd()) %>% 
-  select(f.eid, Stroke_Status, date) %>% 
-  group_by(f.eid, Stroke_Status) %>% summarise(minDate= min(date))
+# t0<- stroke_tbl %>% gather(key, value, -c(f.eid, Stroke_Status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>% 
+#   select(f.eid, Stroke_Status, date) %>% 
+#   group_by(f.eid, Stroke_Status) %>% summarise(minDate= min(date))
+# 
 
 # t0<- IHD_tbl %>% gather(key, value, -c(f.eid, IHD_status)) %>%
-#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>% 
-#   select(f.eid, IHD_status, date) %>% 
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, IHD_status, date) %>%
 #   group_by(f.eid, IHD_status) %>% summarise(minDate= min(date))
-# 
-# t0<- non_IHD_tbl %>% gather(key, value, -c(f.eid, non_IHD_status)) %>%
-#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>% 
-#   select(f.eid, non_IHD_status, date) %>% 
-#   group_by(f.eid, non_IHD_status) %>% summarise(minDate= min(date))
-# 
+
+
+t0<- non_IHD_tbl %>% gather(key, value, -c(f.eid, non_IHD_status)) %>%
+  mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+  select(f.eid, non_IHD_status, date) %>%
+  group_by(f.eid, non_IHD_status) %>% summarise(minDate= min(date))
+
 # t0<- HF_tbl %>% gather(key, value, -c(f.eid, HF_status)) %>%
 #   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>% 
 #   select(f.eid, HF_status, date) %>% 
@@ -122,7 +144,7 @@ View(t0)
 temp_df <- sample_df %>% select(f.eid, recruitment_date) 
 temp_df$recruitment_date <- ymd(temp_df$recruitment_date)
 
-t2 <- full_join(temp_df, t1, by = "f.eid") %>% 
+t2 <- full_join(temp_df, t0, by = "f.eid") %>% 
   mutate(prevalent_status = ifelse(minDate <= recruitment_date,1,0),
          incident_status = ifelse(minDate > recruitment_date, 1, 0))
 
@@ -130,9 +152,9 @@ t2$prevalent_status <- replace(t2$prevalent_status,is.na(t2$prevalent_status),0)
 t2$incident_status <- replace(t2$incident_status,is.na(t2$incident_status),0)
 
 # updated_pericardial_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
-updated_stroke_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+# updated_stroke_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
 # updated_IHD_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
-# updated_non_IHD_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+updated_non_IHD_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
 # updated_HA_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
 # updated_HF_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
 

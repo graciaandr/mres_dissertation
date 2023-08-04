@@ -12,12 +12,14 @@ library(data.table)
 library(dplyr)
 library(magrittr)
 library(ggplot2)
-setwd("/Users/BHCadmin/Documents/mres_gracia/")
 ```
 
 ## Load and edit data tables
 
 ```{r}
+setwd("/Users/BHCadmin/Documents/mres_gracia/")
+non_IHD_tbl = read.csv("non_IHD_patients_in_UKB.tsv", sep = "\t")
+
 demographic_table <- read.csv("upd_demographics_table_UKB_data.tsv", header = T, sep = "\t")
 diabetes_tbl = read.csv("diabetes_patients_in_UKB.tsv", sep = "\t")
 stroke_tbl = read.csv("stroke_patients_in_UKB.tsv", sep = "\t")
@@ -39,59 +41,51 @@ sum(RT_tbl$RT_status)
 
 ```
 
-```{r demographics_whole_sample}
-
-# calculate average and median age of whole sample
-mean(demographic_table$age_at_recruitment, na.rm = T)
-median(demographic_table$age_at_recruitment, na.rm = T)
-
-table(demographic_table$ethnicity_at_recruitment)
-
-mean(demographic_table$deprivation_index, na.rm = T)
-median(demographic_table$deprivation_index, na.rm = T)
-
-(table(demographic_table$alc_intake_at_recruitment))
-
-(table(demographic_table$smoking_status_at_recruitment))
-max(table(demographic_table$smoking_status_at_recruitment))
-
-mean(demographic_table$mets_imaging_visit1, na.rm = T)
-median(demographic_table$mets_imaging_visit1, na.rm = T)
-```
 
 ```{r}
 
 nrow(diabetes_tbl)
 diabetes_tbl <- diabetes_tbl %>% group_by(f.eid) %>%
   summarise(diabetes_status = max(diabetes_status, na.rm= TRUE),
-            date_insulin_diabetes = min(date_insulin_diabetes, na.rm= TRUE),
-            date_malnutrition_diabetes = min(date_malnutrition_diabetes, na.rm= TRUE),
-            date_non_insulin_diabetes = min(date_non_insulin_diabetes, na.rm = TRUE),
-            date_other_spec_diabetes = min(date_other_spec_diabetes, na.rm = TRUE),
-            date_other_unspec_diabetes = min(date_other_unspec_diabetes, na.rm = T)
+            date_insulin_diabetes = (min(date_insulin_diabetes, na.rm= TRUE)),
+            date_malnutrition_diabetes = (min(date_malnutrition_diabetes, na.rm= TRUE)),
+            date_non_insulin_diabetes = (min(date_non_insulin_diabetes, na.rm = TRUE)),
+            date_other_spec_diabetes = (min(date_other_spec_diabetes, na.rm = TRUE)),
+            date_other_unspec_diabetes = (min(date_other_unspec_diabetes, na.rm = T))
             )
 nrow(diabetes_tbl)
+diabetes_tbl$date_insulin_diabetes <- ymd(diabetes_tbl$date_insulin_diabetes)
+diabetes_tbl$date_malnutrition_diabetes <- ymd(diabetes_tbl$date_malnutrition_diabetes)
+diabetes_tbl$date_non_insulin_diabetes <- ymd(diabetes_tbl$date_non_insulin_diabetes)
+diabetes_tbl$date_other_spec_diabetes <- ymd(diabetes_tbl$date_other_spec_diabetes)
+diabetes_tbl$date_other_unspec_diabetes <- ymd(diabetes_tbl$date_other_unspec_diabetes)
 
 names(hypertension_tbl)
 hypertension_tbl <- hypertension_tbl %>% group_by(f.eid) %>%
-  summarise(date_hypertension = min(date_hypertension), 
+  summarise(date_hypertension = min(date_hypertension, na.rm = T), 
             hypertension_status = max(hypertension_status)
   )
-  
+hypertension_tbl$date_hypertension <- ymd(hypertension_tbl$date_hypertension)
+
 names(cholesterol_tbl)
 cholesterol_tbl <- cholesterol_tbl %>% group_by(f.eid) %>%
-  summarise(date_lipidaemia = min(date_lipidaemia),
+  summarise(date_lipidaemia = min(date_lipidaemia, na.rm = T),
             cholesterol_status = max(cholesterol_status)
   )
+cholesterol_tbl$date_lipidaemia <- ymd(cholesterol_tbl$date_lipidaemia)
 
 
 names(IHD_tbl)
 IHD_tbl <- IHD_tbl %>% group_by(f.eid) %>% 
   summarise(IHD_status = max(IHD_status,na.rm = T),
-            date_angina_pec = min(date_angina_pec),
-            date_chronic_iscHD = min(date_chronic_iscHD),
-            date_other_iscHD = min(date_other_iscHD)
+            date_angina_pec = min(date_angina_pec,na.rm = T),
+            date_chronic_iscHD = min(date_chronic_iscHD, na.rm = T),
+            date_other_iscHD = min(date_other_iscHD, na.rm = T)
             )
+IHD_tbl$date_angina_pec <- ymd(IHD_tbl$date_angina_pec)
+IHD_tbl$date_chronic_iscHD <- ymd(IHD_tbl$date_chronic_iscHD)
+IHD_tbl$date_other_iscHD <- ymd(IHD_tbl$date_other_iscHD)
+
 
 stroke_tbl <- stroke_tbl %>% group_by(f.eid) %>%
   summarise(Stroke_Status = max(Stroke_Status, na.rm = T),
@@ -103,32 +97,56 @@ stroke_tbl <- stroke_tbl %>% group_by(f.eid) %>%
             date_intracerebral_haemorrhage_42010 = max(date_intracerebral_haemorrhage_42010, na.rm = T),
             date_other_intracerebral_haemorrhage = max(date_other_intracerebral_haemorrhage, na.rm = T))
 
+stroke_tbl$date_stroke <- ymd(stroke_tbl$date_stroke)
+stroke_tbl$date_stroke_42006 <- ymd(stroke_tbl$date_stroke_42006)
+stroke_tbl$date_isch_stroke_42008 <- ymd(stroke_tbl$date_isch_stroke_42008)
+stroke_tbl$date_cerebral_infarction <- ymd(stroke_tbl$date_cerebral_infarction)
+stroke_tbl$date_intracerebral_haemorrhage <- ymd(stroke_tbl$date_intracerebral_haemorrhage)
+stroke_tbl$date_intracerebral_haemorrhage_42010 <- ymd(stroke_tbl$date_intracerebral_haemorrhage_42010)
+stroke_tbl$date_other_intracerebral_haemorrhage <- ymd(stroke_tbl$date_other_intracerebral_haemorrhage)
+
+
 names(HF_tbl)
 HF_tbl <- HF_tbl %>% group_by(f.eid) %>%
   summarise(HF_status = max(HF_status),
-            date_HF = min(date_HF))
+            date_HF = min(date_HF, na.rm = T))
+HF_tbl$date_HF <- ymd(HF_tbl$date_HF)
 
 names(non_IHD_tbl)
+
 non_IHD_tbl <- non_IHD_tbl %>% group_by(f.eid) %>% 
   summarise(non_IHD_status = max(non_IHD_status,na.rm = T),
-            date_cardiomyopathy = min(date_cardiomyopathy),
-            date_cardiomyopathy_elsewhere = min(date_cardiomyopathy_elsewhere),
-            date_hypertensive_HD = min(date_hypertensive_HD),
-            date_hypertensive_HD_and_RD = min(date_hypertensive_HD_and_RD),
+            date_cardiomyopathy = min(date_cardiomyopathy, na.rm = T),
+            date_cardiomyopathy_elsewhere = min(date_cardiomyopathy_elsewhere, na.rm = T),
+            date_hypertensive_HD = min(date_hypertensive_HD, na.rm = T),
+            date_hypertensive_HD_and_RD = min(date_hypertensive_HD_and_RD, na.rm = T),
             )
+non_IHD_tbl$date_cardiomyopathy <- ymd(non_IHD_tbl$date_cardiomyopathy)
+non_IHD_tbl$date_cardiomyopathy_elsewhere <- ymd(non_IHD_tbl$date_cardiomyopathy_elsewhere)
+non_IHD_tbl$date_hypertensive_HD <- ymd(non_IHD_tbl$date_hypertensive_HD)
+non_IHD_tbl$date_hypertensive_HD_and_RD <- ymd(non_IHD_tbl$date_hypertensive_HD_and_RD)
+
 names(HA_tbl)
 
 pericardial_tbl <- pericardial_tbl %>% group_by(f.eid) %>%
   summarise(pericard_status = max(pericard_status),
-            date_pericard = min(pericard_date))
+            pericard_date = min(pericard_date, na.rm = T))
+
+pericardial_tbl$pericard_date <- ymd(pericardial_tbl$pericard_date)
 
 HA_tbl <- HA_tbl %>% group_by(f.eid) %>%
   summarise(HA_status = max(HA_status),
-            date_acute_HA = min(date_acute_HA),
-            date_subseq_HA = min(date_subseq_HA),
-            date_complications_after_HA = min(date_complications_after_HA),
-            date_myo_infarction_HA = min(date_myo_infarction_HA),
+            date_acute_HA = min(date_acute_HA, na.rm = T),
+            date_subseq_HA = min(date_subseq_HA, na.rm = T),
+            date_complications_after_HA = min(date_complications_after_HA, na.rm = T),
+            date_myo_infarction_HA = min(date_myo_infarction_HA, na.rm = T),
             )
+HA_tbl$date_acute_HA <- ymd(HA_tbl$date_acute_HA)
+HA_tbl$date_subseq_HA <- ymd(HA_tbl$date_subseq_HA)
+HA_tbl$date_complications_after_HA <- ymd(HA_tbl$date_complications_after_HA)
+HA_tbl$date_myo_infarction_HA <- ymd(HA_tbl$date_myo_infarction_HA)
+
+
 #put all data frames into list
 df_list <- list(demographic_table, 
                 diabetes_tbl, hypertension_tbl, cholesterol_tbl,
@@ -153,7 +171,36 @@ write.table(sample_df, file = "analysis_sample_UKB_patients.tsv", sep = "\t")
 
 ```
 
+```{r}
+diabetes_tbl
+cholesterol_tbl
+IHD_tbl %>% filter(IHD_status >0)
+non_IHD_tbl %>% filter(non_IHD_status >0)
+pericardial_tbl %>% filter(pericard_status >0)
+HA_tbl
+HF_tbl
 
+```
+
+```{r demographics_whole_sample}
+
+# calculate average and median age of whole sample
+mean(demographic_table$age_at_recruitment, na.rm = T)
+median(demographic_table$age_at_recruitment, na.rm = T)
+
+table(demographic_table$ethnicity_at_recruitment)
+
+mean(demographic_table$deprivation_index, na.rm = T)
+median(demographic_table$deprivation_index, na.rm = T)
+
+(table(demographic_table$alc_intake_at_recruitment))
+
+(table(demographic_table$smoking_status_at_recruitment))
+max(table(demographic_table$smoking_status_at_recruitment))
+
+mean(demographic_table$mets_imaging_visit1, na.rm = T)
+median(demographic_table$mets_imaging_visit1, na.rm = T)
+```
 
 ```{r}
 head(IHD_tbl)
