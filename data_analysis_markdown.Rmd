@@ -171,6 +171,161 @@ write.table(sample_df, file = "analysis_sample_UKB_patients.tsv", sep = "\t")
 
 ```
 
+
+```{r relabelling_cases}
+
+BC_tbl = read.csv("BC_patients_in_UKB.tsv", sep = "\t")
+sum(BC_tbl$BC_status)
+
+RT_tbl = read.csv("RT_patients_in_UKB.tsv", sep = "\t")
+RT_tbl$RT_status <- NULL
+RT_tbl$RT_status <- ifelse(RT_tbl$RT_date_icd10 == '' & RT_tbl$RT_date_opcs4 == '', 0, 1)
+sum(RT_tbl$RT_status)
+
+BC_tbl[(BC_tbl == "")] <- "2050-12-12"
+RT_tbl[(RT_tbl == "")] <- "2050-12-12"
+stroke_tbl[is.na(stroke_tbl)] <- "2050-12-12"
+IHD_tbl[is.na(IHD_tbl)] <- "2050-12-12"
+non_IHD_tbl[is.na(non_IHD_tbl)] <- "2050-12-12"
+pericardial_tbl[is.na(pericardial_tbl)] <- "2050-12-12"
+HA_tbl[is.na(HA_tbl)] <- "2050-12-12"
+HF_tbl[is.na(HF_tbl)] <- "2050-12-12"
+
+diabetes_tbl[is.na(diabetes_tbl)] <- "2050-12-12"
+hypertension_tbl[is.na(hypertension_tbl)] <- "2050-12-12"
+cholesterol_tbl[is.na(cholesterol_tbl)] <- "2050-12-12"
+
+# t0<- diabetes_tbl %>% gather(key, value, -c(f.eid, diabetes_status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, diabetes_status, date) %>%
+#   group_by(f.eid, diabetes_status) %>% summarise(minDate= min(date))
+
+# t0<- hypertension_tbl %>% gather(key, value, -c(f.eid, hypertension_status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, hypertension_status, date) %>%
+#   group_by(f.eid, hypertension_status) %>% summarise(minDate= min(date))
+
+t0<- cholesterol_tbl %>% gather(key, value, -c(f.eid, cholesterol_status)) %>%
+  mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+  select(f.eid, cholesterol_status, date) %>%
+  group_by(f.eid, cholesterol_status) %>% summarise(minDate= min(date))
+
+# t0<- BC_tbl %>% gather(key, value, -c(f.eid, BC_status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, BC_status, date) %>%
+#   group_by(f.eid, BC_status) %>% summarise(minDate= min(date))
+
+# t0<- RT_tbl %>% gather(key, value, -c(f.eid, RT_status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, RT_status, date) %>%
+#   group_by(f.eid, RT_status) %>% summarise(minDate= min(date))
+
+# t0<- stroke_tbl %>% gather(key, value, -c(f.eid, Stroke_Status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, Stroke_Status, date) %>%
+#   group_by(f.eid, Stroke_Status) %>% summarise(minDate= min(date))
+
+# t0<- IHD_tbl %>% gather(key, value, -c(f.eid, IHD_status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, IHD_status, date) %>%
+#   group_by(f.eid, IHD_status) %>% summarise(minDate= min(date))
+
+# t0<- non_IHD_tbl %>% gather(key, value, -c(f.eid, non_IHD_status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, non_IHD_status, date) %>%
+#   group_by(f.eid, non_IHD_status) %>% summarise(minDate= min(date, na.rm = F))
+
+# t0<- HF_tbl %>% gather(key, value, -c(f.eid, HF_status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, HF_status, date) %>%
+#   group_by(f.eid, HF_status) %>% summarise(minDate= min(date))
+
+# t0<- HA_tbl %>% gather(key, value, -c(f.eid, HA_status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, HA_status, date) %>%
+#   group_by(f.eid, HA_status) %>% summarise(minDate= min(date))
+
+# t0<- pericardial_tbl %>% gather(key, value, -c(f.eid, pericard_status)) %>%
+#   mutate(date= str_sub(value, 1, 10) %>% ymd()) %>%
+#   select(f.eid, pericard_status, date) %>%
+#   group_by(f.eid, pericard_status) %>% summarise(minDate= min(date))
+
+t0$minDate <- ymd(t0$minDate)
+t0$minDate[t0$minDate == "2050-12-12"] <- NA
+View(t0)
+
+temp_df <- sample_df %>% select(f.eid, recruitment_date) 
+temp_df$recruitment_date <- ymd(temp_df$recruitment_date)
+
+t2 <- full_join(temp_df, t0, by = "f.eid") %>% 
+  mutate(prevalent_status = ifelse(minDate <= recruitment_date,1,0),
+         incident_status = ifelse(minDate > recruitment_date, 1, 0))
+
+t2$prevalent_status <- replace(t2$prevalent_status,is.na(t2$prevalent_status),0)
+t2$incident_status <- replace(t2$incident_status,is.na(t2$incident_status),0)
+
+# updated_diabetes_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+# updated_hypertension_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+updated_cholesterol_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+
+updated_pericardial_tbl <- updated_pericardial_tbl %>% rename(pericard_diagnosis_date = minDate)
+updated_stroke_tbl <- updated_stroke_tbl %>% rename(stroke_diagnosis_date = minDate, 
+                                                    stroke_status = Stroke_Status)
+updated_IHD_tbl <- updated_IHD_tbl %>% rename(IHD_diagnosis_date = minDate)
+updated_non_IHD_tbl <- updated_non_IHD_tbl %>% rename(non_IHD_diagnosis_date = minDate)
+updated_HF_tbl <- updated_HF_tbl %>% rename(HF_date = minDate)
+updated_HA_tbl <- updated_HA_tbl %>% rename(HA_date = minDate)
+updated_RT_tbl <- updated_RT_tbl %>% rename(RT_session_date = minDate)
+updated_BC_tbl <- updated_BC_tbl %>% rename(BC_diagnosis_date = minDate)
+
+updated_diabetes_tbl <- updated_diabetes_tbl %>% rename(diabetes_diagnosis_date = minDate)
+updated_hypertension_tbl <- updated_hypertension_tbl %>% rename(hypertension_diagnosis_date = minDate)
+updated_cholesterol_tbl <- updated_cholesterol_tbl %>% rename(cholesterol_diagnosis_date = minDate)
+
+
+# df_list <- list(demographic_table, 
+#                 updated_diabetes_tbl %>%select(-recruitment_date), 
+#                 updated_hypertension_tbl %>%select(-recruitment_date), 
+#                 updated_cholesterol_tbl %>%select(-recruitment_date),
+#                 updated_IHD_tbl %>%select(-recruitment_date), 
+#                 updated_non_IHD_tbl %>%select(-recruitment_date), 
+#                 updated_HF_tbl %>%select(-recruitment_date), 
+#                 updated_stroke_tbl %>%select(-recruitment_date), 
+#                 updated_pericardial_tbl %>%select(-recruitment_date), 
+#                 updated_HA_tbl %>%select(-recruitment_date)
+#                 )
+# 
+# #merge all data frames in list
+# updated_sample_df <- df_list %>% reduce(full_join, by='f.eid')
+# View(head(updated_sample_df, 10))
+
+
+# updated_pericardial_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+# updated_stroke_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+# updated_IHD_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+# updated_non_IHD_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+# updated_HF_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+# updated_HA_tbl <- tidyr::replace_na(t2, list(prevalent_status=0, incident_status=0))
+
+```
+
+
+<!-- ```{r} -->
+<!-- write.table(updated_diabetes_tbl, file = "updated_diabetes_tbl.tsv", sep = "\t") -->
+<!-- write.table(updated_cholesterol_tbl, file = "updated_cholesterol_tbl.tsv", sep = "\t") -->
+<!-- write.table(updated_hypertension_tbl, file = "updated_hypertension_tbl.tsv", sep = "\t") -->
+
+<!-- write.table(updated_IHD_tbl, file = "updated_IHD_tbl.tsv", sep = "\t") -->
+<!-- write.table(updated_non_IHD_tbl, file = "updated_non_IHD_tbl.tsv", sep = "\t") -->
+<!-- write.table(updated_HF_tbl, file = "updated_HF_tbl.tsv", sep = "\t") -->
+<!-- write.table(updated_HA_tbl, file = "updated_HA_tbl.tsv", sep = "\t") -->
+<!-- write.table(updated_pericardial_tbl, file = "updated_pericardial_tbl.tsv", sep = "\t") -->
+<!-- write.table(updated_stroke_tbl, file = "updated_stroke_tbl.tsv", sep = "\t") -->
+<!-- write.table(updated_BC_tbl, file = "updated_BC_tbl.tsv", sep = "\t") -->
+<!-- write.table(updated_RT_tbl, file = "updated_RT_tbl.tsv", sep = "\t") -->
+<!-- ``` -->
+
+
 ```{r}
 diabetes_tbl
 cholesterol_tbl
