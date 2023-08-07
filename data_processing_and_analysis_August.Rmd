@@ -291,7 +291,7 @@ factor_cols <- c(factor_cols, names(tmp))
 df1 <- demographic_table %>% dplyr:: select(contains("ethnicity"))
 factor_cols <- c(factor_cols, names(df1))
 
-demographic_table <- demographic_table %>% mutate(across(all_of(factor_cols), factor))
+# demographic_table <- demographic_table %>% mutate(across(all_of(factor_cols), factor))
 demographic_table$recruitment_date <- ymd(demographic_table$recruitment_date)
 demographic_table$sex <- factor(demographic_table$sex)
 demographic_table$f.eid <- as.character(demographic_table$f.eid)
@@ -353,6 +353,11 @@ prop.table(table(demographic_table_BC$ethnicity_at_recruitment))
 prop.table(table(demographic_table_BC$alc_intake_at_recruitment))
 prop.table(table(demographic_table_BC$smoking_status_at_recruitment))
 
+library(janitor)
+tabyl(demographic_table_BC$sex, sort = TRUE)
+tabyl(demographic_table_BC$ethnicity_at_recruitment, sort = TRUE)
+# tabyl(demographic_table_BC$alc_intake_at_recruitment, sort = TRUE)
+# tabyl(demographic_table_BC$smoking_status_at_recruitment, sort = TRUE)
 
 ```
 
