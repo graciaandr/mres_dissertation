@@ -56,71 +56,344 @@ no_RT_ids <- RT_tbl %>% dplyr::filter(RT_status == 0) %>% select(f.eid)
 no_RT_and_BC_ids <- intersect(as.vector(BC_ids), as.vector(no_RT_ids$f.eid))
 length(no_RT_and_BC_ids)
 
+cmr_ids <- cmr_measures_tbl$f.eid
+cmr_no_bc_ids <- intersect(cmr_ids, non_BC_ids)
+length(cmr_no_bc_ids)
+
+cmr_bc_ids <- intersect(cmr_ids, BC_ids)
+length(cmr_bc_ids)
+
+cmr_bc_rt_ids <- intersect(cmr_ids, RT_and_BC_ids)
+length(cmr_bc_rt_ids)
+
+cmr_bc_but_no_mrt <- intersect(cmr_ids, no_RT_and_BC_ids)
+length(cmr_bc_but_no_mrt)
+
 sample_df <- read.csv("analysis_sample_UKB_patients.tsv", sep = "\t")
 ```
 
 
-## Baseline Characteristics of Whole Sample
+## Baseline Characteristics of Whole and Sub Samples
 
 ### CVDs
 
 ```{r whole_sample_CVDs}
+paste("Prevelant Cases of Pericardial Disease:", sum(pericardial_tbl$prevalent_status))
+paste("Incident Cases of Pericardial Disease:", sum(pericardial_tbl$incident_status))
 
-paste("Prevelant Cases of Pericardial Disease:", sum(updated_pericardial_tbl$prevalent_status))
-paste("Incident Cases of Pericardial Disease:", sum(updated_pericardial_tbl$incident_status))
+paste("Prevelant Cases of MYO INF:", sum(HA_tbl$prevalent_status))
+paste("Incident Cases of HYO INF:", sum(HA_tbl$incident_status))
 
-paste("Prevelant Cases of MYO INF:", sum(updated_HA_tbl$prevalent_status))
-paste("Incident Cases of HYO INF:", sum(updated_HA_tbl$incident_status))
+paste("Prevelant Cases of HF:", sum(HF_tbl$prevalent_status))
+paste("Incident Cases of HF:", sum(HF_tbl$incident_status))
 
+paste("Prevelant Cases of STROKE:", sum(stroke_tbl$prevalent_status))
+paste("Incident Cases of STROKE:", sum(stroke_tbl$incident_status))
 
+paste("Prevelant Cases of IHD:", sum(IHD_tbl$prevalent_status))
+paste("Incident Cases of IHD:", sum(IHD_tbl$incident_status))
+
+paste("Prevelant Cases of NICM:", sum(non_IHD_tbl$prevalent_status))
+paste("Incident Cases of NICM:", sum(non_IHD_tbl$incident_status))
+
+cat("No of diabetes patients in whole sample:", sum(sample_df$diabetes_status), "\n")
+cat("No of hypertension patients in whole sample:", sum(sample_df$hypertension_status), "\n")
+cat("No of cholesterol patients in whole sample:", sum(sample_df$cholesterol_status), "\n")
+
+continuous <-select_if(demographic_table, is.numeric)
+summary(continuous)
+
+```
+
+```{r BC_sample_CVDs}
+stroke_tbl_BC <- stroke_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+IHD_tbl_BC <- IHD_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+NICM_tbl_BC <- non_IHD_tbl %>% dplyr::filter(f.eid %in% BC_ids) 
+pericard_tbl_BC <- pericardial_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+HF_tbl_BC <- HF_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+myocard_tbl_BC <- HA_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% BC_ids) 
+cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% BC_ids)
+  
+paste("Prevelant Cases of Pericardial Disease:", sum(pericard_tbl_BC$prevalent_status))
+paste("Incident Cases of Pericardial Disease:", sum(pericard_tbl_BC$incident_status))
+
+paste("Prevelant Cases of MYO INF:", sum(myocard_tbl_BC$prevalent_status))
+paste("Incident Cases of MYO INF:", sum(myocard_tbl_BC$incident_status))
+
+paste("Prevelant Cases of HF:", sum(HF_tbl_BC$prevalent_status))
+paste("Incident Cases of HF:", sum(HF_tbl_BC$incident_status))
+
+paste("Prevelant Cases of STROKE:", sum(stroke_tbl_BC$prevalent_status))
+paste("Incident Cases of STROKE:", sum(stroke_tbl_BC$incident_status))
+
+paste("Prevelant Cases of IHD:", sum(IHD_tbl_BC$prevalent_status))
+paste("Incident Cases of IHD:", sum(IHD_tbl_BC$incident_status))
+
+paste("Prevelant Cases of NICM:", sum(NICM_tbl_BC$prevalent_status))
+paste("Incident Cases of NICM:", sum(NICM_tbl_BC$incident_status))
+
+cat("No of diabetes patients in whole sample:", sum(diabetes_tbl_BC$diabetes_status), "\n")
+cat("No of hypertension patients in whole sample:", sum(hypertension_tbl_BC$hypertension_status), "\n")
+cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$cholesterol_status), "\n")
+```
+
+```{r BC_and_MRT_sample_CVDs}
+stroke_tbl_BC <- stroke_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+IHD_tbl_BC <- IHD_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+NICM_tbl_BC <- non_IHD_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids) 
+pericard_tbl_BC <- pericardial_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+HF_tbl_BC <- HF_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+myocard_tbl_BC <- HA_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids) 
+cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+  
+paste("Prevelant Cases of Pericardial Disease:", sum(pericard_tbl_BC$prevalent_status))
+paste("Incident Cases of Pericardial Disease:", sum(pericard_tbl_BC$incident_status))
+
+paste("Prevelant Cases of MYO INF:", sum(myocard_tbl_BC$prevalent_status))
+paste("Incident Cases of MYO INF:", sum(myocard_tbl_BC$incident_status))
+
+paste("Prevelant Cases of HF:", sum(HF_tbl_BC$prevalent_status))
+paste("Incident Cases of HF:", sum(HF_tbl_BC$incident_status))
+
+paste("Prevelant Cases of STROKE:", sum(stroke_tbl_BC$prevalent_status))
+paste("Incident Cases of STROKE:", sum(stroke_tbl_BC$incident_status))
+
+paste("Prevelant Cases of IHD:", sum(IHD_tbl_BC$prevalent_status))
+paste("Incident Cases of IHD:", sum(IHD_tbl_BC$incident_status))
+
+paste("Prevelant Cases of NICM:", sum(NICM_tbl_BC$prevalent_status))
+paste("Incident Cases of NICM:", sum(NICM_tbl_BC$incident_status))
+
+cat("No of diabetes patients in whole sample:", sum(diabetes_tbl_BC$diabetes_status), "\n")
+cat("No of hypertension patients in whole sample:", sum(hypertension_tbl_BC$hypertension_status), "\n")
+cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$cholesterol_status), "\n")
+```
+
+```{r CMR_sample_CVDs}
+
+pericard_tbl_BC <- pericardial_tbl %>% filter(f.eid %in% cmr_ids)
+stroke_tbl_BC <- stroke_tbl %>% filter(f.eid %in% cmr_ids)
+myocard_tbl_BC <- HA_tbl %>% filter(f.eid %in% cmr_ids)
+HF_tbl_BC <- HF_tbl %>% filter(f.eid %in% cmr_ids)
+IHD_tbl_BC <- IHD_tbl %>% filter(f.eid %in% cmr_ids)
+NICM_tbl_BC <- non_IHD_tbl %>% filter(f.eid %in% cmr_ids)
+diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% cmr_ids) 
+cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% cmr_ids)
+hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% cmr_ids)
+ 
+paste("Prevelant Cases of Pericardial Disease:", sum(pericard_tbl_BC$prevalent_status))
+paste("Incident Cases of Pericardial Disease:", sum(pericard_tbl_BC$incident_status))
+
+paste("Prevelant Cases of MYO INF:", sum(myocard_tbl_BC$prevalent_status))
+paste("Incident Cases of MYO INF:", sum(myocard_tbl_BC$incident_status))
+
+paste("Prevelant Cases of HF:", sum(HF_tbl_BC$prevalent_status))
+paste("Incident Cases of HF:", sum(HF_tbl_BC$incident_status))
+
+paste("Prevelant Cases of STROKE:", sum(stroke_tbl_BC$prevalent_status))
+paste("Incident Cases of STROKE:", sum(stroke_tbl_BC$incident_status))
+
+paste("Prevelant Cases of IHD:", sum(IHD_tbl_BC$prevalent_status))
+paste("Incident Cases of IHD:", sum(IHD_tbl_BC$incident_status))
+
+paste("Prevelant Cases of NICM:", sum(NICM_tbl_BC$prevalent_status))
+paste("Incident Cases of NICM:", sum(NICM_tbl_BC$incident_status))
+
+cat("No of diabetes patients in whole sample:", sum(diabetes_tbl_BC$diabetes_status), "\n")
+cat("No of hypertension patients in whole sample:", sum(hypertension_tbl_BC$hypertension_status), "\n")
+cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$cholesterol_status), "\n")
+
+```
+
+```{r CMR_BC_sample_CVDs}
+
+stroke_tbl_BC <- stroke_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+IHD_tbl_BC <- IHD_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+NICM_tbl_BC <- non_IHD_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids) 
+pericard_tbl_BC <- pericardial_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+HF_tbl_BC <- HF_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+myocard_tbl_BC <- HA_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids) 
+cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+  
+paste("Prevelant Cases of Pericardial Disease:", sum(pericard_tbl_BC$prevalent_status))
+paste("Incident Cases of Pericardial Disease:", sum(pericard_tbl_BC$incident_status))
+
+paste("Prevelant Cases of MYO INF:", sum(myocard_tbl_BC$prevalent_status))
+paste("Incident Cases of MYO INF:", sum(myocard_tbl_BC$incident_status))
+
+paste("Prevelant Cases of HF:", sum(HF_tbl_BC$prevalent_status))
+paste("Incident Cases of HF:", sum(HF_tbl_BC$incident_status))
+
+paste("Prevelant Cases of STROKE:", sum(stroke_tbl_BC$prevalent_status))
+paste("Incident Cases of STROKE:", sum(stroke_tbl_BC$incident_status))
+
+paste("Prevelant Cases of IHD:", sum(IHD_tbl_BC$prevalent_status))
+paste("Incident Cases of IHD:", sum(IHD_tbl_BC$incident_status))
+
+paste("Prevelant Cases of NICM:", sum(NICM_tbl_BC$prevalent_status))
+paste("Incident Cases of NICM:", sum(NICM_tbl_BC$incident_status))
+
+cat("No of diabetes patients in whole sample:", sum(diabetes_tbl_BC$diabetes_status), "\n")
+cat("No of hypertension patients in whole sample:", sum(hypertension_tbl_BC$hypertension_status), "\n")
+cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$cholesterol_status), "\n")
+```
+
+```{r CMR_BC_and_MRT_sample_CVDs}
+
+stroke_tbl_BC <- stroke_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
+IHD_tbl_BC <- IHD_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
+NICM_tbl_BC <- non_IHD_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids) 
+pericard_tbl_BC <- pericardial_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
+HF_tbl_BC <- HF_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
+myocard_tbl_BC <- HA_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
+diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids) 
+cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
+hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
+  
+paste("Prevelant Cases of Pericardial Disease:", sum(pericard_tbl_BC$prevalent_status))
+paste("Incident Cases of Pericardial Disease:", sum(pericard_tbl_BC$incident_status))
+
+paste("Prevelant Cases of MYO INF:", sum(myocard_tbl_BC$prevalent_status))
+paste("Incident Cases of MYO INF:", sum(myocard_tbl_BC$incident_status))
+
+paste("Prevelant Cases of HF:", sum(HF_tbl_BC$prevalent_status))
+paste("Incident Cases of HF:", sum(HF_tbl_BC$incident_status))
+
+paste("Prevelant Cases of STROKE:", sum(stroke_tbl_BC$prevalent_status))
+paste("Incident Cases of STROKE:", sum(stroke_tbl_BC$incident_status))
+
+paste("Prevelant Cases of IHD:", sum(IHD_tbl_BC$prevalent_status))
+paste("Incident Cases of IHD:", sum(IHD_tbl_BC$incident_status))
+
+paste("Prevelant Cases of NICM:", sum(NICM_tbl_BC$prevalent_status))
+paste("Incident Cases of NICM:", sum(NICM_tbl_BC$incident_status))
+
+cat("No of diabetes patients in whole sample:", sum(diabetes_tbl_BC$diabetes_status), "\n")
+cat("No of hypertension patients in whole sample:", sum(hypertension_tbl_BC$hypertension_status), "\n")
+cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$cholesterol_status), "\n")
 ```
 
 ### Demographics
 
-```{r demographics_whole_sample}
-View(t3)
+```{r preprocessing_of_demographics_table}
+tmp <- demographic_table %>% dplyr:: select(contains("status"))
+factor_cols <- names(tmp)
 
-# calculate average and median age of whole sample
-mean(demographic_table$age_at_recruitment, na.rm = T)
-median(demographic_table$age_at_recruitment, na.rm = T)
+tmp <- demographic_table %>% dplyr:: select(contains("alc"))
+factor_cols <- c(factor_cols, names(tmp))
 
-table(demographic_table$ethnicity_at_recruitment)
+df1 <- demographic_table %>% dplyr:: select(contains("ethnicity"))
+factor_cols <- c(factor_cols, names(df1))
 
-mean(demographic_table$deprivation_index, na.rm = T)
-median(demographic_table$deprivation_index, na.rm = T)
+demographic_table <- demographic_table %>% mutate(across(all_of(factor_cols), factor))
+demographic_table$recruitment_date <- ymd(demographic_table$recruitment_date)
+demographic_table$sex <- factor(demographic_table$sex)
+demographic_table$f.eid <- as.character(demographic_table$f.eid)
 
-(table(demographic_table$alc_intake_at_recruitment))
-
-(table(demographic_table$smoking_status_at_recruitment))
-max(table(demographic_table$smoking_status_at_recruitment))
-
-mean(demographic_table$mets_imaging_visit1, na.rm = T)
-median(demographic_table$mets_imaging_visit1, na.rm = T)
+demographic_table$ethnicity_at_recruitment[demographic_table["ethnicity_at_recruitment"] == -1000] <- NA
+demographic_table$ethnicity_at_calib_visit[demographic_table["ethnicity_at_calib_visit"] == -1000] <- NA
+demographic_table$ethnicity_at_imaging_visit1[demographic_table["ethnicity_at_imaging_visit1"] == -1000] <- NA
 ```
 
 ```{r demographics_whole_sample}
 
-# calculate average and median age of whole sample
-mean(demographic_table$age_at_recruitment, na.rm = T)
-median(demographic_table$age_at_recruitment, na.rm = T)
+# continuous <-select_if(demographic_table, is.numeric)
+# summary(continuous)
 
-table(demographic_table$ethnicity_at_recruitment)
+# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% BC_ids)
+# continuous <-select_if(demographic_table_BC, is.numeric)
+# summary(continuous)
 
-mean(demographic_table$deprivation_index, na.rm = T)
-median(demographic_table$deprivation_index, na.rm = T)
+# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% non_BC_ids)
+# continuous <-select_if(demographic_table_BC, is.numeric)
+# summary(continuous)
+# 
+# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% no_RT_and_BC_ids)
+# continuous <-select_if(demographic_table_BC, is.numeric)
+# summary(continuous)
+# 
+# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+# continuous <-select_if(demographic_table_BC, is.numeric)
+# summary(continuous)
 
-(table(demographic_table$alc_intake_at_recruitment))
+demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% cmr_ids)
+continuous <-select_if(demographic_table_BC, is.numeric)
+summary(continuous)
 
-(table(demographic_table$smoking_status_at_recruitment))
-max(table(demographic_table$smoking_status_at_recruitment))
+# library(ggplot2)
+# ggplot(demographic_table, aes(x = age_at_recruitment)) +
+#     geom_density(alpha = .2, fill = "#FF6666")
+# 
+# ggplot(demographic_table, aes(x = deprivation_index)) +
+#     geom_density(alpha = .2, fill = "#FF6666")
+# 
+# ggplot(demographic_table, aes(x = education_score)) +
+#     geom_density(alpha = .2, fill = "#FF6666")
+# 
+# ggplot(demographic_table, aes(x = mets_imaging_visit1)) +
+#     geom_density(alpha = .2, fill = "#FF6666")
+	
+# options(scipen = 999)
+# ggplot(factor, aes(x = sex)) +
+#     geom_bar(alpha = .8, fill = "blue")
 
-mean(demographic_table$mets_imaging_visit1, na.rm = T)
-median(demographic_table$mets_imaging_visit1, na.rm = T)
+# prop.table(table(demographic_table$sex))
+# prop.table(table(demographic_table$ethnicity_at_recruitment))
+# prop.table(table(demographic_table$alc_intake_at_recruitment))
+# prop.table(table(demographic_table$smoking_status_at_recruitment))
+
+prop.table(table(demographic_table_BC$sex))
+prop.table(table(demographic_table_BC$ethnicity_at_recruitment))
+prop.table(table(demographic_table_BC$alc_intake_at_recruitment))
+prop.table(table(demographic_table_BC$smoking_status_at_recruitment))
+
+
 ```
 
 
 
-## Linear Rgeression Models
+### CMR measures
+
+```{r}
+# names(cmr_measures_tbl)
+
+# ggplot(cmr_measures_tbl, aes(x = LVEDVI)) +
+#     geom_density(alpha = .2, fill = "purple")
+# ggplot(cmr_measures_tbl, aes(x = LV_mass2)) +
+#     geom_density(alpha = .2, fill = "purple")
+# ggplot(cmr_measures_tbl, aes(x = LVEF)) +
+#     geom_density(alpha = .2, fill = "purple")
+# ggplot(cmr_measures_tbl, aes(x = LVGFI)) +
+#     geom_density(alpha = .2, fill = "purple")
+# ggplot(cmr_measures_tbl, aes(x = GLS)) +
+#     geom_density(alpha = .2, fill = "purple")
+
+summary(cmr_measures_tbl)
+
+BC_CMR_tbl <- cmr_measures_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+summary(BC_CMR_tbl)
+
+BC_CMR_tbl <- cmr_measures_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
+summary(BC_CMR_tbl)
+
+BC_CMR_tbl <- cmr_measures_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+summary(BC_CMR_tbl)
+
+BC_CMR_tbl <- cmr_measures_tbl %>% dplyr::filter(f.eid %in% cmr_no_bc_ids)
+summary(BC_CMR_tbl)
+
+BC_CMR_tbl <- cmr_measures_tbl %>% dplyr::filter(f.eid %in% cmr_bc_but_no_mrt)
+summary(BC_CMR_tbl)
+```
+
+
+## Linear Regression Models
 
 ### Filtering and Data Wrangling for BC patients
 ```{r LM_BC_vs_no_BC}
@@ -186,35 +459,37 @@ head(GLM_df, 20)
 #### Linear Regression Model 
 
 ```{r}
-# continuous <-select_if(GLM_df, is.numeric)
-# summary(continuous)
-# 
-# library(ggplot2)
-# ggplot(continuous, aes(x = age_at_recruitment)) +
-#     geom_density(alpha = .2, fill = "#FF6666")
-names(GLM_df)
+GLM_df
+
+# names(GLM_df)
 
 test_df <- GLM_df %>% 
   select(f.eid, BC_status, prev_status_stroke, incident_status_stroke)
 
-test_df
-# test_df$BC_status<- as.numeric(test_df$BC_status)    
-# sum(is.na(test_df$prev_status_stroke))
-
 formula = incident_status_stroke ~ BC_status
-formula2 = incident_status_stroke ~ BC_status + age_at_recruitment + ethnicity_at_recruitment + 
-  deprivation_index + education_score + diabetes_status + cholesterol_status + hypertension_status
 
 model1 <- glm(formula, data = test_df, family = "binomial")
-model2 <- glm(formula2, data = GLM_df, family = "binomial")
 summary(model1)
-summary(model2)
 ```
-
 
 ### ...
 ```{r LM_BC_vs_no_BC_including_Covariates}
 
+formula2 = incident_status_stroke ~ BC_status + 
+  # age_at_recruitment + ethnicity_at_recruitment + 
+  # deprivation_index + education_score + 
+  diabetes_status + cholesterol_status + hypertension_status
+model2 <- glm(formula2, data = GLM_df, family = "binomial")
+summary(model2)
+
+
+formula3 = incident_status_stroke ~ BC_status + 
+  age_at_recruitment + ethnicity_at_recruitment +
+  deprivation_index + education_score + alc_intake_at_recruitment +
+  smoking_status_at_recruitment + mets_imaging_visit1 +
+  diabetes_status + cholesterol_status + hypertension_status
+model3 <- glm(formula3, data = GLM_df, family = "binomial")
+summary(model3)
 ```
 
 ## Fine Gray Compete Risk Regressions
