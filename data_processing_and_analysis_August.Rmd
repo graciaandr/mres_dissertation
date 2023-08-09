@@ -15,6 +15,10 @@ library(magrittr)
 library(ggplot2)
 library(lubridate)
 library(broom.mixed)
+library("survival")
+library("survminer")
+library(vtable)
+
 setwd("/Users/BHCadmin/Documents/mres_gracia/")
 ```
 
@@ -99,10 +103,6 @@ paste("Incident Cases of NICM:", sum(non_IHD_tbl$incident_status))
 cat("No of diabetes patients in whole sample:", sum(sample_df$diabetes_status), "\n")
 cat("No of hypertension patients in whole sample:", sum(sample_df$hypertension_status), "\n")
 cat("No of cholesterol patients in whole sample:", sum(sample_df$cholesterol_status), "\n")
-
-continuous <-select_if(demographic_table, is.numeric)
-summary(continuous)
-
 ```
 
 ```{r BC_sample_CVDs}
@@ -299,13 +299,46 @@ demographic_table$f.eid <- as.character(demographic_table$f.eid)
 demographic_table$ethnicity_at_recruitment[demographic_table["ethnicity_at_recruitment"] == -1000] <- NA
 demographic_table$ethnicity_at_calib_visit[demographic_table["ethnicity_at_calib_visit"] == -1000] <- NA
 demographic_table$ethnicity_at_imaging_visit1[demographic_table["ethnicity_at_imaging_visit1"] == -1000] <- NA
+
+demographic_table$ethnicity_at_recruitment[demographic_table["ethnicity_at_recruitment"] != 1] <- 0
 ```
 
 ```{r demographics_whole_sample}
 
-# continuous <-select_if(demographic_table, is.numeric)
-# summary(continuous)
+continuous <-select_if(demographic_table, is.numeric)
+summary(continuous)
+st(continuous)
 
+table_one <- tableby(BC_status ~ ., data = GLM_df %>% select(-ethnicity_at_calib_visit, 
+                                                             -ethnicity_at_calib_visit,
+                                                             -ethnicity_at_imaging_visit1,
+                                                             -alc_intake_at_recruitment,
+                                                             -alc_intake_at_calib_visit,
+                                                             -alc_intake_at_imaging_visit1,
+                                                             -alc_intake_at_imaging_visit2,
+                                                             -smoking_status_at_calib_visit,
+                                                             -smoking_status_at_imaging_visit1,
+                                                             -smoking_status_at_imaging_visit2,
+                                                             -mets_imaging_visit2,
+                                                             -time)) 
+summary(table_one, title = "Gapminder Data")
+
+
+table_four <- tableby(~BC_status + age_at_recruitment + sex + ethnicity_at_recruitment + deprivation_index, 
+                      data = GLM_df,
+                      numeric.stats=c("N", "median", "q1q3"),) 
+
+sum_table <- summary(table_four, text = NULL)
+sum_table <- as.data.frame(sum_table)
+sum_table
+write.table(sum_table, 'summary_stats_testDF.tsv', sep = "\t")
+
+sink("summary_stats_testDF.txt")
+( summary(table_four) )
+sink()
+
+library(broom)
+glance(summary(table_four))
 # demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% BC_ids)
 # continuous <-select_if(demographic_table_BC, is.numeric)
 # summary(continuous)
@@ -454,7 +487,7 @@ hypertension_tbl_BC <- hypertension_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %
 demographic_table$f.eid <- as.integer(demographic_table$f.eid)
 
 df_list <- list(
-                BC_tbl %>% select(-recruitment_date, -prevalent_status, -incident_status, -BC_diagnosis_date), 
+                BC_tbl %>% select(-recruitment_date), 
                 RT_tbl %>% select(-recruitment_date, -prevalent_status, -incident_status, -RT_session_date),
                 demographic_table, diabetes_tbl_BC, hypertension_tbl_BC, cholesterol_tbl_BC,
                 IHD_tbl_BC, NICM_tbl_BC, HF_tbl_BC, stroke_tbl_BC, pericard_tbl_BC, myocard_tbl_BC
@@ -474,14 +507,22 @@ factor_cols <- c(factor_cols, names(df1))
 GLM_df <- GLM_df %>% mutate(across(all_of(factor_cols), factor))
 # data<-replace(df$Marks, df$Marks<0, 0)
 GLM_df$recruitment_date <- ymd(GLM_df$recruitment_date)
+GLM_df$BC_diagnosis_date <- ymd(GLM_df$BC_diagnosis_date)
+GLM_df$RT_session_date <- ymd(GLM_df$RT_session_date)
 GLM_df$sex <- factor(GLM_df$sex)
+GLM_df$time = as.numeric(difftime(time2 = GLM_df$recruitment_date, time1 = GLM_df$BC_diagnosis_date))
+GLM_df$time[is.na(GLM_df$time)] <- 0
 # nrow(GLM_df)
 head(GLM_df, 20)
+
+# write.table(GLM_df, file = "table_for_regression_models.tsv", sep = "\t")
+# saveRDS(GLM_df, file = "table_for_regression_models.rds")
+# readRDS("table_for_regression_models.rds")
 ```
 
-#### Linear Regression Model 
+#### Linear Regression Models
 
-```{r regression model}
+```{r lin_regression_model}
 
 names(GLM_df)
 
@@ -546,36 +587,222 @@ table_of_model <- tidy(model1)
 
 # table_of_model
 
+cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
+formula = LVEDVI ~ BC_status + age_at_recruitment + sex
+model1 <- glm(formula, data = cmr_df)
+summary(model1)
+
+cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
+formula = LV_mass2 ~ BC_status + age_at_recruitment + sex
+model1 <- glm(formula, data = cmr_df)
+summary(model1)
+
+cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
+formula = LVEF ~ BC_status + age_at_recruitment + sex
+model1 <- glm(formula, data = cmr_df)
+summary(model1)
+
+cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
+formula = LVGFI ~ BC_status + age_at_recruitment + sex
+model1 <- glm(formula, data = cmr_df)
+summary(model1)
+
+cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
+formula = GLS ~ BC_status + age_at_recruitment + sex
+model1 <- glm(formula, data = cmr_df)
+summary(model1)
+
+formula = GLS ~ BC_status + age_at_recruitment + sex + 
+  smoking_status_at_recruitment + alc_intake_at_recruitment + 
+  mets_imaging_visit1 + 
+  deprivation_index + ethnicity_at_recruitment +
+  diabetes_status + cholesterol_status + hypertension_status
+model1 <- glm(formula, data = cmr_df)
+summary(model1)
+
+x <- summary(model1)
+x
+signif(x$conf.int[,"lower .95"], 2)
+signif(x$conf.int[,"upper .95"],2)
+
 ## try Cox regression next
 ## then Fine Gray (compete risk) regression
-cmr_measures_tbl$LVGFI
+# cmr_measures_tbl$LVGFI
+names(cmr_measures_tbl)
 ```
 
-### ...
-```{r LM_BC_vs_no_BC_including_Covariates}
-names(GLM_df)
+### Cox Regression Models
 
-formula2 = incident_status_stroke ~ BC_status + 
+```{r cox_regressions}
+
+### NICM
+#### Model 1
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_NICM, incident_status_NICM, 
+         age_at_recruitment, sex, recruitment_date, time) %>% filter(prev_status_NICM == 0)
+
+formula = Surv(time, as.numeric(incident_status_NICM)) ~ BC_status + age_at_recruitment + sex
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
+### ALCOHOL INTAKE AS ORDINAL OR FACTOR -> DIFFERENCE IN RESULTS ???
+
+#### Model 2
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_NICM, incident_status_NICM, 
+         age_at_recruitment, sex, recruitment_date, time, 
+         smoking_status_at_recruitment, ethnicity_at_recruitment,
+         deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
+         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_NICM == 0)
+
+formula = Surv(time, as.numeric(incident_status_NICM)) ~ BC_status + 
   age_at_recruitment + sex + 
   smoking_status_at_recruitment + alc_intake_at_recruitment + 
   mets_imaging_visit1 + 
-  deprivation_index + # education_score + ethnicity_at_recruitment +
+  deprivation_index + ethnicity_at_recruitment +
   diabetes_status + cholesterol_status + hypertension_status
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
 
-test_tbl <- GLM_df %>% filter(incident_status_stroke==0) 
-model2 <- glm(formula2, data = test_tbl, family = "binomial")
-summary(model2)
+### IHD
+#### Model 1
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_IHD, incident_status_IHD, 
+         age_at_recruitment, sex, recruitment_date, time) %>% filter(prev_status_IHD == 0)
 
+formula = Surv(time, as.numeric(incident_status_IHD)) ~ BC_status + age_at_recruitment + sex
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
 
-formula3 = incident_status_myocard_inf ~ BC_status + 
-  age_at_recruitment + sex + ethnicity_at_recruitment +
-  deprivation_index + education_score + alc_intake_at_recruitment +
-  smoking_status_at_recruitment + mets_imaging_visit1 +
+#### Model 2
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_IHD, incident_status_IHD, 
+         age_at_recruitment, sex, recruitment_date, time, 
+         smoking_status_at_recruitment, ethnicity_at_recruitment,
+         deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
+         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_IHD == 0)
+
+formula = Surv(time, as.numeric(incident_status_IHD)) ~ BC_status + 
+  age_at_recruitment + sex + 
+  smoking_status_at_recruitment + alc_intake_at_recruitment + 
+  mets_imaging_visit1 + 
+  deprivation_index + ethnicity_at_recruitment +
   diabetes_status + cholesterol_status + hypertension_status
-model3 <- glm(formula3, data = GLM_df, family = "binomial")
-summary(model3)
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
+
+### Stroke
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_stroke, incident_status_stroke, 
+         age_at_recruitment, sex, recruitment_date, time) %>% filter(prev_status_stroke == 0)
+
+formula = Surv(time, as.numeric(incident_status_stroke)) ~ BC_status + age_at_recruitment + sex
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
+
+#### Model 2
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_stroke, incident_status_stroke, 
+         age_at_recruitment, sex, recruitment_date, time, 
+         smoking_status_at_recruitment, ethnicity_at_recruitment,
+         deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
+         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_stroke == 0)
+
+formula = Surv(time, as.numeric(incident_status_stroke)) ~ BC_status + 
+  age_at_recruitment + sex + 
+  smoking_status_at_recruitment + alc_intake_at_recruitment + 
+  mets_imaging_visit1 + 
+  deprivation_index + ethnicity_at_recruitment +
+  diabetes_status + cholesterol_status + hypertension_status
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
+
+### PERICARDIAL DISEASE
+#### Model 1
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_pericard, incident_status_pericard, 
+         age_at_recruitment, sex, recruitment_date, time) %>% filter(prev_status_pericard == 0)
+
+formula = Surv(time, as.numeric(incident_status_pericard)) ~ BC_status + age_at_recruitment + sex
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
+
+#### Model 2
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_pericard, incident_status_pericard, 
+         age_at_recruitment, sex, recruitment_date, time, 
+         smoking_status_at_recruitment, ethnicity_at_recruitment,
+         deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
+         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_pericard == 0)
+
+formula = Surv(time, as.numeric(incident_status_pericard)) ~ BC_status + 
+  age_at_recruitment + sex + 
+  smoking_status_at_recruitment + alc_intake_at_recruitment + 
+  mets_imaging_visit1 + 
+  deprivation_index + ethnicity_at_recruitment +
+  diabetes_status + cholesterol_status + hypertension_status
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
+
+### MYOCARDIAL INFARCTION
+#### Model 1
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_myocard_inf, incident_status_myocard_inf, 
+         age_at_recruitment, sex, recruitment_date, time) %>% filter(prev_status_myocard_inf == 0)
+
+formula = Surv(time, as.numeric(incident_status_myocard_inf)) ~ BC_status + age_at_recruitment + sex
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
 
 
+#### Model 2
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_myocard_inf, incident_status_myocard_inf, 
+         age_at_recruitment, sex, recruitment_date, time, 
+         smoking_status_at_recruitment, ethnicity_at_recruitment,
+         deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
+         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_myocard_inf == 0)
+
+formula = Surv(time, as.numeric(incident_status_myocard_inf)) ~ BC_status + 
+  age_at_recruitment + sex + 
+  smoking_status_at_recruitment + alc_intake_at_recruitment + 
+  mets_imaging_visit1 + 
+  deprivation_index + ethnicity_at_recruitment +
+  diabetes_status + cholesterol_status + hypertension_status
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
+
+
+### HEART FAILURE
+#### Model 1
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_HF, incident_status_HF, 
+         age_at_recruitment, sex, recruitment_date, time) %>% filter(prev_status_HF == 0)
+
+formula = Surv(time, as.numeric(incident_status_HF)) ~ BC_status + age_at_recruitment + sex
+res.cox  <- coxph(formula, data = test_df)
+x <- summary(res.cox)
+x
+signif(x$conf.int[,"lower .95"], 2)
+signif(x$conf.int[,"upper .95"],2)
+
+
+
+#### Model 2
+test_df <- GLM_df %>% 
+  select(f.eid, BC_status, BC_diagnosis_date, prev_status_HF, incident_status_HF, 
+         age_at_recruitment, sex, recruitment_date, time, 
+         smoking_status_at_recruitment, ethnicity_at_recruitment,
+         deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
+         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_HF == 0)
+
+formula = Surv(time, as.numeric(incident_status_HF)) ~ BC_status + 
+  age_at_recruitment + sex + 
+  smoking_status_at_recruitment + alc_intake_at_recruitment + 
+  mets_imaging_visit1 + 
+  deprivation_index + ethnicity_at_recruitment +
+  diabetes_status + cholesterol_status + hypertension_status
+res.cox  <- coxph(formula, data = test_df)
+summary(res.cox)
 ```
 
 ## Fine Gray Compete Risk Regressions
@@ -583,6 +810,7 @@ summary(model3)
 ```{r}
 
 ```
+
 
 
 
