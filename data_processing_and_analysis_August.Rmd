@@ -190,8 +190,8 @@ GLM_df <- GLM_df %>%
 # nrow(GLM_df)
 head(GLM_df, 20)
 
-write.table(GLM_df, file = "table_for_regression_models.tsv", sep = "\t")
-saveRDS(GLM_df, file = "table_for_regression_models.rds")
+# write.table(GLM_df, file = "table_for_regression_models.tsv", sep = "\t")
+# saveRDS(GLM_df, file = "table_for_regression_models.rds")
 # readRDS("table_for_regression_models.rds")
 ```
 
