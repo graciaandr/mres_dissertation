@@ -260,6 +260,12 @@ View(sum_table)
 
 ## Linear Regression Models for CMR measures
 
+```{r}
+GLM_df <- GLM_df %>% dplyr::filter(f.eid %in% BC_ids)
+```
+
+
+
 ```{r lin_regression_model}
 
 cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
@@ -579,7 +585,6 @@ combined_info <- do.call(rbind, filtered_info_list)
 
 # Print the combined table with coefficients, confidence intervals, and p-values for selected terms
 print(combined_info)
-
 ```
 
 
