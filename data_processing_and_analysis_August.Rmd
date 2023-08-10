@@ -15,17 +15,16 @@ library(magrittr)
 library(ggplot2)
 library(lubridate)
 library(broom.mixed)
-library("survival")
-library("survminer")
 library(vtable)
+library(survival)
+library(broom)
+library(purrr)
 
 setwd("/Users/BHCadmin/Documents/mres_gracia/")
 ```
 
 ## Load and edit data tables
 ```{r}
-setwd("/Users/BHCadmin/Documents/mres_gracia/")
-
 demographic_table <- read.csv("upd_demographics_table_UKB_data.tsv", header = T, sep = "\t")
 cmr_measures_tbl <- read.csv("CMR_patients_in_UKB.tsv", header = T, sep = "\t")
 
@@ -78,7 +77,6 @@ sample_df <- read.csv("analysis_sample_UKB_patients.tsv", sep = "\t")
 GLM_df <- readRDS("table_for_regression_models.rds")
 
 ```
-
 
 ## Data Preprocessing and Wrangling for summary stats
 
@@ -199,207 +197,7 @@ saveRDS(GLM_df, file = "table_for_regression_models.rds")
 
 ## Baseline Characteristics of Whole and Sub Samples
 
-### CVDs
-
-```{r whole_sample_CVDs}
-paste("Prevelant Cases of Pericardial Disease:", sum(pericardial_tbl$prevalent_status))
-paste("Incident Cases of Pericardial Disease:", sum(pericardial_tbl$incident_status))
-
-paste("Prevelant Cases of MYO INF:", sum(HA_tbl$prevalent_status))
-paste("Incident Cases of HYO INF:", sum(HA_tbl$incident_status))
-
-paste("Prevelant Cases of HF:", sum(HF_tbl$prevalent_status))
-paste("Incident Cases of HF:", sum(HF_tbl$incident_status))
-
-paste("Prevelant Cases of STROKE:", sum(stroke_tbl$prevalent_status))
-paste("Incident Cases of STROKE:", sum(stroke_tbl$incident_status))
-
-paste("Prevelant Cases of IHD:", sum(IHD_tbl$prevalent_status))
-paste("Incident Cases of IHD:", sum(IHD_tbl$incident_status))
-
-paste("Prevelant Cases of NICM:", sum(non_IHD_tbl$prevalent_status))
-paste("Incident Cases of NICM:", sum(non_IHD_tbl$incident_status))
-
-cat("No of diabetes patients in whole sample:", sum(sample_df$diabetes_status), "\n")
-cat("No of hypertension patients in whole sample:", sum(sample_df$hypertension_status), "\n")
-cat("No of cholesterol patients in whole sample:", sum(sample_df$cholesterol_status), "\n")
-```
-
-```{r BC_sample_CVDs}
-stroke_tbl_BC <- stroke_tbl %>% dplyr::filter(f.eid %in% BC_ids)
-IHD_tbl_BC <- IHD_tbl %>% dplyr::filter(f.eid %in% BC_ids)
-NICM_tbl_BC <- non_IHD_tbl %>% dplyr::filter(f.eid %in% BC_ids) 
-pericard_tbl_BC <- pericardial_tbl %>% dplyr::filter(f.eid %in% BC_ids)
-HF_tbl_BC <- HF_tbl %>% dplyr::filter(f.eid %in% BC_ids)
-myocard_tbl_BC <- HA_tbl %>% dplyr::filter(f.eid %in% BC_ids)
-diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% BC_ids) 
-cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% BC_ids)
-hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% BC_ids)
-  
-paste("Prevelant Cases of Pericardial Disease:", sum(pericard_tbl_BC$prevalent_status))
-paste("Incident Cases of Pericardial Disease:", sum(pericard_tbl_BC$incident_status))
-
-paste("Prevelant Cases of MYO INF:", sum(myocard_tbl_BC$prevalent_status))
-paste("Incident Cases of MYO INF:", sum(myocard_tbl_BC$incident_status))
-
-paste("Prevelant Cases of HF:", sum(HF_tbl_BC$prevalent_status))
-paste("Incident Cases of HF:", sum(HF_tbl_BC$incident_status))
-
-paste("Prevelant Cases of STROKE:", sum(stroke_tbl_BC$prevalent_status))
-paste("Incident Cases of STROKE:", sum(stroke_tbl_BC$incident_status))
-
-paste("Prevelant Cases of IHD:", sum(IHD_tbl_BC$prevalent_status))
-paste("Incident Cases of IHD:", sum(IHD_tbl_BC$incident_status))
-
-paste("Prevelant Cases of NICM:", sum(NICM_tbl_BC$prevalent_status))
-paste("Incident Cases of NICM:", sum(NICM_tbl_BC$incident_status))
-
-cat("No of diabetes patients in whole sample:", sum(diabetes_tbl_BC$diabetes_status), "\n")
-cat("No of hypertension patients in whole sample:", sum(hypertension_tbl_BC$hypertension_status), "\n")
-cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$cholesterol_status), "\n")
-```
-
-```{r BC_and_MRT_sample_CVDs}
-stroke_tbl_BC <- stroke_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
-IHD_tbl_BC <- IHD_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
-NICM_tbl_BC <- non_IHD_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids) 
-pericard_tbl_BC <- pericardial_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
-HF_tbl_BC <- HF_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
-myocard_tbl_BC <- HA_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
-diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids) 
-cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
-hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
-  
-paste("Prevelant Cases of Pericardial Disease:", sum(pericard_tbl_BC$prevalent_status))
-paste("Incident Cases of Pericardial Disease:", sum(pericard_tbl_BC$incident_status))
-
-paste("Prevelant Cases of MYO INF:", sum(myocard_tbl_BC$prevalent_status))
-paste("Incident Cases of MYO INF:", sum(myocard_tbl_BC$incident_status))
-
-paste("Prevelant Cases of HF:", sum(HF_tbl_BC$prevalent_status))
-paste("Incident Cases of HF:", sum(HF_tbl_BC$incident_status))
-
-paste("Prevelant Cases of STROKE:", sum(stroke_tbl_BC$prevalent_status))
-paste("Incident Cases of STROKE:", sum(stroke_tbl_BC$incident_status))
-
-paste("Prevelant Cases of IHD:", sum(IHD_tbl_BC$prevalent_status))
-paste("Incident Cases of IHD:", sum(IHD_tbl_BC$incident_status))
-
-paste("Prevelant Cases of NICM:", sum(NICM_tbl_BC$prevalent_status))
-paste("Incident Cases of NICM:", sum(NICM_tbl_BC$incident_status))
-
-cat("No of diabetes patients in whole sample:", sum(diabetes_tbl_BC$diabetes_status), "\n")
-cat("No of hypertension patients in whole sample:", sum(hypertension_tbl_BC$hypertension_status), "\n")
-cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$cholesterol_status), "\n")
-```
-
-```{r CMR_sample_CVDs}
-
-pericard_tbl_BC <- pericardial_tbl %>% filter(f.eid %in% cmr_ids)
-stroke_tbl_BC <- stroke_tbl %>% filter(f.eid %in% cmr_ids)
-myocard_tbl_BC <- HA_tbl %>% filter(f.eid %in% cmr_ids)
-HF_tbl_BC <- HF_tbl %>% filter(f.eid %in% cmr_ids)
-IHD_tbl_BC <- IHD_tbl %>% filter(f.eid %in% cmr_ids)
-NICM_tbl_BC <- non_IHD_tbl %>% filter(f.eid %in% cmr_ids)
-diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% cmr_ids) 
-cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% cmr_ids)
-hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% cmr_ids)
- 
-paste("Prevelant Cases of Pericardial Disease:", sum(pericard_tbl_BC$prevalent_status))
-paste("Incident Cases of Pericardial Disease:", sum(pericard_tbl_BC$incident_status))
-
-paste("Prevelant Cases of MYO INF:", sum(myocard_tbl_BC$prevalent_status))
-paste("Incident Cases of MYO INF:", sum(myocard_tbl_BC$incident_status))
-
-paste("Prevelant Cases of HF:", sum(HF_tbl_BC$prevalent_status))
-paste("Incident Cases of HF:", sum(HF_tbl_BC$incident_status))
-
-paste("Prevelant Cases of STROKE:", sum(stroke_tbl_BC$prevalent_status))
-paste("Incident Cases of STROKE:", sum(stroke_tbl_BC$incident_status))
-
-paste("Prevelant Cases of IHD:", sum(IHD_tbl_BC$prevalent_status))
-paste("Incident Cases of IHD:", sum(IHD_tbl_BC$incident_status))
-
-paste("Prevelant Cases of NICM:", sum(NICM_tbl_BC$prevalent_status))
-paste("Incident Cases of NICM:", sum(NICM_tbl_BC$incident_status))
-
-cat("No of diabetes patients in whole sample:", sum(diabetes_tbl_BC$diabetes_status), "\n")
-cat("No of hypertension patients in whole sample:", sum(hypertension_tbl_BC$hypertension_status), "\n")
-cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$cholesterol_status), "\n")
-
-```
-
-```{r CMR_BC_sample_CVDs}
-
-stroke_tbl_BC <- stroke_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
-IHD_tbl_BC <- IHD_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
-NICM_tbl_BC <- non_IHD_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids) 
-pericard_tbl_BC <- pericardial_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
-HF_tbl_BC <- HF_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
-myocard_tbl_BC <- HA_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
-diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids) 
-cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
-hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
-  
-paste("Prevelant Cases of Pericardial Disease:", sum(pericard_tbl_BC$prevalent_status))
-paste("Incident Cases of Pericardial Disease:", sum(pericard_tbl_BC$incident_status))
-
-paste("Prevelant Cases of MYO INF:", sum(myocard_tbl_BC$prevalent_status))
-paste("Incident Cases of MYO INF:", sum(myocard_tbl_BC$incident_status))
-
-paste("Prevelant Cases of HF:", sum(HF_tbl_BC$prevalent_status))
-paste("Incident Cases of HF:", sum(HF_tbl_BC$incident_status))
-
-paste("Prevelant Cases of STROKE:", sum(stroke_tbl_BC$prevalent_status))
-paste("Incident Cases of STROKE:", sum(stroke_tbl_BC$incident_status))
-
-paste("Prevelant Cases of IHD:", sum(IHD_tbl_BC$prevalent_status))
-paste("Incident Cases of IHD:", sum(IHD_tbl_BC$incident_status))
-
-paste("Prevelant Cases of NICM:", sum(NICM_tbl_BC$prevalent_status))
-paste("Incident Cases of NICM:", sum(NICM_tbl_BC$incident_status))
-
-cat("No of diabetes patients in whole sample:", sum(diabetes_tbl_BC$diabetes_status), "\n")
-cat("No of hypertension patients in whole sample:", sum(hypertension_tbl_BC$hypertension_status), "\n")
-cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$cholesterol_status), "\n")
-```
-
-```{r CMR_BC_and_MRT_sample_CVDs}
-
-stroke_tbl_BC <- stroke_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
-IHD_tbl_BC <- IHD_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
-NICM_tbl_BC <- non_IHD_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids) 
-pericard_tbl_BC <- pericardial_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
-HF_tbl_BC <- HF_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
-myocard_tbl_BC <- HA_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
-diabetes_tbl_BC <- diabetes_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids) 
-cholesterol_tbl_BC <- cholesterol_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
-hypertension_tbl_BC <- hypertension_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
-  
-paste("Prevelant Cases of Pericardial Disease:", sum(pericard_tbl_BC$prevalent_status))
-paste("Incident Cases of Pericardial Disease:", sum(pericard_tbl_BC$incident_status))
-
-paste("Prevelant Cases of MYO INF:", sum(myocard_tbl_BC$prevalent_status))
-paste("Incident Cases of MYO INF:", sum(myocard_tbl_BC$incident_status))
-
-paste("Prevelant Cases of HF:", sum(HF_tbl_BC$prevalent_status))
-paste("Incident Cases of HF:", sum(HF_tbl_BC$incident_status))
-
-paste("Prevelant Cases of STROKE:", sum(stroke_tbl_BC$prevalent_status))
-paste("Incident Cases of STROKE:", sum(stroke_tbl_BC$incident_status))
-
-paste("Prevelant Cases of IHD:", sum(IHD_tbl_BC$prevalent_status))
-paste("Incident Cases of IHD:", sum(IHD_tbl_BC$incident_status))
-
-paste("Prevelant Cases of NICM:", sum(NICM_tbl_BC$prevalent_status))
-paste("Incident Cases of NICM:", sum(NICM_tbl_BC$incident_status))
-
-cat("No of diabetes patients in whole sample:", sum(diabetes_tbl_BC$diabetes_status), "\n")
-cat("No of hypertension patients in whole sample:", sum(hypertension_tbl_BC$hypertension_status), "\n")
-cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$cholesterol_status), "\n")
-```
-
-### Demographics
+### CVDs and Demographics of whole and BC Sub Samples
 
 ```{r demographics_whole_sample}
 
@@ -434,9 +232,7 @@ View(sum_table)
 
 ```
 
-
-
-### CMR measures
+### CVDs and Demographics of CMR Sub Samples
 
 ```{r cmr_descriptive_stats}
 
@@ -462,7 +258,7 @@ View(sum_table)
 
 ```
 
-### Linear Regression Models
+## Linear Regression Models for CMR measures
 
 ```{r lin_regression_model}
 
@@ -507,14 +303,60 @@ signif(x$conf.int[,"upper .95"],2)
 names(cmr_measures_tbl)
 ```
 
-### Cox Regression Models
+
+```{r}
+# Load necessary packages (if not already loaded)
+library(dplyr)
+
+# Sample data
+data <- mtcars  # Use the 'mtcars' dataset as an example
+
+# Step 1: Create a list of linear regression models (you should have your own list)
+lm_models_list <- list(
+  model1 = lm(mpg ~ wt + hp, data = data),
+  model2 = lm(mpg ~ wt + hp + qsec, data = data)
+  # Add more linear regression models as needed
+)
+
+# Specify the list of predictors (variables) you want to include in the final merged table
+selected_predictors <- c("wt", "hp")  # Adjust this list as needed
+
+# Step 2: Extract coefficients, p-values, and confidence intervals from each model
+extract_model_info <- function(model) {
+  summary_info <- summary(model)
+  coef_table <- coef(summary_info)
+  conf_interval_table <- confint(model)
+  p_value_table <- coef_table[, "Pr(>|t|)"]
+  
+  # Combine the extracted information
+  model_info <- data.frame(
+    predictor = rownames(coef_table),
+    coef = coef_table[, "Estimate"],
+    conf_low = conf_interval_table[, 1],
+    conf_high = conf_interval_table[, 2],
+    p_value = p_value_table
+  )
+  
+  return(model_info)
+}
+
+# Step 3: Extract information from each linear regression model and filter for selected predictors
+extracted_info_list <- lapply(lm_models_list, extract_model_info)
+filtered_info_list <- lapply(extracted_info_list, function(info) {
+  filter(info, predictor %in% selected_predictors)
+})
+
+# Step 4: Combine the filtered information into a single data frame
+combined_info <- do.call(rbind, filtered_info_list)
+
+# Print the combined table with coefficients, confidence intervals, and p-values for selected predictors
+print(combined_info)
+
+```
+
+## Cox Regression Models for CVD outcomes
 
 ```{r cox_regressions}
-
-library(survival)
-library(broom)
-library(purrr)
-
 
 ### NICM
 #### Model 1
@@ -524,10 +366,8 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_NICM)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
-summary(res.cox)
-
+# summary(res.cox)
 cox_models <- list(res.cox)
-
 
 #### Model 2
 test_df <- GLM_df %>% 
@@ -535,18 +375,17 @@ test_df <- GLM_df %>%
          age_at_recruitment, sex, recruitment_date, time, 
          smoking_status_at_recruitment, ethnicity_at_recruitment,
          deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
-         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_NICM == 0)
+         prev_status_diabetes, prev_status_hypertension, prev_status_cholesterol) %>% filter(prev_status_NICM == 0)
 
 formula = Surv(time, as.numeric(incident_status_NICM)) ~ BC_status + 
   age_at_recruitment + sex + 
   smoking_status_at_recruitment + alc_intake_at_recruitment + 
   mets_imaging_visit1 + 
   deprivation_index + ethnicity_at_recruitment +
-  diabetes_status + cholesterol_status + hypertension_status
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
-
-summary(res.cox)
+# summary(res.cox)
+cox_models <- c(cox_models, list(res.cox))
 
 ### IHD
 #### Model 1
@@ -556,8 +395,8 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_IHD)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
-summary(res.cox)
+# summary(res.cox)
+cox_models <- c(cox_models, list(res.cox))
 
 #### Model 2
 test_df <- GLM_df %>% 
@@ -565,17 +404,17 @@ test_df <- GLM_df %>%
          age_at_recruitment, sex, recruitment_date, time, 
          smoking_status_at_recruitment, ethnicity_at_recruitment,
          deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
-         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_IHD == 0)
+         prev_status_diabetes, prev_status_hypertension, prev_status_cholesterol) %>% filter(prev_status_IHD == 0)
 
 formula = Surv(time, as.numeric(incident_status_IHD)) ~ BC_status + 
   age_at_recruitment + sex + 
   smoking_status_at_recruitment + alc_intake_at_recruitment + 
   mets_imaging_visit1 + 
   deprivation_index + ethnicity_at_recruitment +
-  diabetes_status + cholesterol_status + hypertension_status
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
-summary(res.cox)
+# summary(res.cox)
+cox_models <- c(cox_models, list(res.cox))
 
 ### Stroke
 test_df <- GLM_df %>% 
@@ -584,8 +423,8 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_stroke)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
-summary(res.cox)
+# summary(res.cox)
+cox_models <- c(cox_models, list(res.cox))
 
 #### Model 2
 test_df <- GLM_df %>% 
@@ -593,17 +432,17 @@ test_df <- GLM_df %>%
          age_at_recruitment, sex, recruitment_date, time, 
          smoking_status_at_recruitment, ethnicity_at_recruitment,
          deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
-         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_stroke == 0)
+         prev_status_diabetes, prev_status_hypertension, prev_status_cholesterol) %>% filter(prev_status_stroke == 0)
 
 formula = Surv(time, as.numeric(incident_status_stroke)) ~ BC_status + 
   age_at_recruitment + sex + 
   smoking_status_at_recruitment + alc_intake_at_recruitment + 
   mets_imaging_visit1 + 
   deprivation_index + ethnicity_at_recruitment +
-  diabetes_status + cholesterol_status + hypertension_status
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
-summary(res.cox)
+# summary(res.cox)
+cox_models <- c(cox_models, list(res.cox))
 
 ### PERICARDIAL DISEASE
 #### Model 1
@@ -613,8 +452,8 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_pericard)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
-summary(res.cox)
+# summary(res.cox)
+cox_models <- c(cox_models, list(res.cox))
 
 #### Model 2
 test_df <- GLM_df %>% 
@@ -622,17 +461,17 @@ test_df <- GLM_df %>%
          age_at_recruitment, sex, recruitment_date, time, 
          smoking_status_at_recruitment, ethnicity_at_recruitment,
          deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
-         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_pericard == 0)
+         prev_status_diabetes, prev_status_hypertension, prev_status_cholesterol) %>% filter(prev_status_pericard == 0)
 
 formula = Surv(time, as.numeric(incident_status_pericard)) ~ BC_status + 
   age_at_recruitment + sex + 
   smoking_status_at_recruitment + alc_intake_at_recruitment + 
   mets_imaging_visit1 + 
   deprivation_index + ethnicity_at_recruitment +
-  diabetes_status + cholesterol_status + hypertension_status
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
-summary(res.cox)
+# summary(res.cox)
+cox_models <- c(cox_models, list(res.cox))
 
 ### MYOCARDIAL INFARCTION
 #### Model 1
@@ -642,8 +481,8 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_myocard_inf)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
-summary(res.cox)
+# summary(res.cox)
+cox_models <- c(cox_models, list(res.cox))
 
 
 #### Model 2
@@ -652,18 +491,17 @@ test_df <- GLM_df %>%
          age_at_recruitment, sex, recruitment_date, time, 
          smoking_status_at_recruitment, ethnicity_at_recruitment,
          deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
-         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_myocard_inf == 0)
+         prev_status_diabetes, prev_status_hypertension, prev_status_cholesterol) %>% filter(prev_status_myocard_inf == 0)
 
 formula = Surv(time, as.numeric(incident_status_myocard_inf)) ~ BC_status + 
   age_at_recruitment + sex + 
   smoking_status_at_recruitment + alc_intake_at_recruitment + 
   mets_imaging_visit1 + 
   deprivation_index + ethnicity_at_recruitment +
-  diabetes_status + cholesterol_status + hypertension_status
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
-summary(res.cox)
-
+# summary(res.cox)
+cox_models <- c(cox_models, list(res.cox))
 
 ### HEART FAILURE
 #### Model 1
@@ -673,8 +511,8 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_HF)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
-summary(res.cox)
+# summary(res.cox)
+cox_models <- c(cox_models, list(res.cox))
 
 #### Model 2
 test_df <- GLM_df %>% 
@@ -682,26 +520,68 @@ test_df <- GLM_df %>%
          age_at_recruitment, sex, recruitment_date, time, 
          smoking_status_at_recruitment, ethnicity_at_recruitment,
          deprivation_index, alc_intake_at_recruitment, mets_imaging_visit1,
-         diabetes_status, hypertension_status, cholesterol_status) %>% filter(prev_status_HF == 0)
+         prev_status_diabetes, prev_status_hypertension, prev_status_cholesterol) %>% filter(prev_status_HF == 0)
 
 formula = Surv(time, as.numeric(incident_status_HF)) ~ BC_status + 
   age_at_recruitment + sex + 
   smoking_status_at_recruitment + alc_intake_at_recruitment + 
   mets_imaging_visit1 + 
   deprivation_index + ethnicity_at_recruitment +
-  diabetes_status + cholesterol_status + hypertension_status
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
 res.cox  <- coxph(formula, data = test_df)
-cox_models <- c(cox_models, res.cox)
 summary(res.cox)
 
-# Apply tidy() to each model and store the results in a list
-tidy_results <- map(cox_models, tidy)
-# Combine the results into a single data frame
-overview_table <- bind_rows(tidy_results, .id = "Model")
+# Step 1: Create a list of Cox models (you should have your own list)
+cox_models <- c(cox_models, list(res.cox))
+print(length(cox_models))
 
-# Print the overview table
-print(overview_table)
+# Specify the list of terms (variables) you want to include in the final merged table
+selected_terms <- c("BC_status1", "sex", "age_at_recruitment")  # Adjust this list as needed
+
+
+# Step 2: Extract coefficients, p-values, and confidence intervals from each model
+extract_model_info <- function(model) {
+  model_summary <- summary(model)
+  coef_table <- as.data.frame(model_summary$coefficients)
+  conf_interval_table <- as.data.frame(model_summary$conf.int)
+  p_value_table <- as.data.frame(model_summary$coefficients[, "Pr(>|z|)"])
+  
+  # Combine the extracted information
+  model_info <- data.frame(
+    coef_identifier = rownames(coef_table),
+    coef = coef_table[, "coef"],
+    conf_low = conf_interval_table[, "lower .95"],
+    conf_high = conf_interval_table[, "upper .95"],
+    p_value = p_value_table
+  )
+  
+  # Format the p-values and include significance levels
+  formatted_p_values <- format.pval(p_value_table, digits = 3)
+  significance_levels <- ifelse(p_value_table < 0.001, "***",
+                                 ifelse(p_value_table < 0.01, "**",
+                                        ifelse(p_value_table < 0.05, "*", "")))
+  
+  # Combine the formatted p-values and significance levels with the extracted information
+  model_info$p_value <- formatted_p_values
+  model_info$significance <- significance_levels
+  
+  return(model_info)
+}
+
+# Step 3: Extract information from each Cox model and filter for selected terms
+extracted_info_list <- lapply(cox_models, extract_model_info)
+filtered_info_list <- lapply(extracted_info_list, function(info) {
+  filter(info, coef_identifier %in% selected_terms)
+})
+
+# Step 4: Combine the filtered information into a single data frame
+combined_info <- do.call(rbind, filtered_info_list)
+
+# Print the combined table with coefficients, confidence intervals, and p-values for selected terms
+print(combined_info)
+
 ```
+
 
 ## Fine Gray Compete Risk Regressions
 
