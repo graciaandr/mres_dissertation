@@ -41,7 +41,7 @@ pericardial_tbl <- read.csv("updated_pericardial_tbl.tsv", sep = "\t")
 stroke_tbl = read.csv("updated_stroke_tbl.tsv", sep = "\t")
 
 BC_tbl <- read.csv("updated_BC_tbl.tsv", sep = "\t", header = T)
-BC_ids <- BC_tbl %>% dplyr::filter(BC_status == 1) %>% select(f.eid)
+BC_ids <- BC_tbl %>% dplyr::filter(prevalent_status == 1) %>% select(f.eid)
 nrow(BC_ids)
 BC_ids <- as.vector(BC_ids$f.eid)
 
@@ -74,8 +74,128 @@ cmr_bc_but_no_mrt <- intersect(cmr_ids, no_RT_and_BC_ids)
 length(cmr_bc_but_no_mrt)
 
 sample_df <- read.csv("analysis_sample_UKB_patients.tsv", sep = "\t")
+
+GLM_df <- readRDS("table_for_regression_models.rds")
+
 ```
 
+
+## Data Preprocessing and Wrangling for summary stats
+
+```{r preprocessing_of_demographics_table}
+tmp <- demographic_table %>% dplyr:: select(contains("status"))
+factor_cols <- names(tmp)
+
+tmp <- demographic_table %>% dplyr:: select(contains("alc"))
+factor_cols <- c(factor_cols, names(tmp))
+
+df1 <- demographic_table %>% dplyr:: select(contains("ethnicity"))
+factor_cols <- c(factor_cols, names(df1))
+
+demographic_table <- demographic_table %>% mutate(across(all_of(factor_cols), factor))
+demographic_table$recruitment_date <- ymd(demographic_table$recruitment_date)
+demographic_table$sex <- factor(demographic_table$sex)
+demographic_table$f.eid <- as.character(demographic_table$f.eid)
+
+demographic_table$ethnicity_at_recruitment[demographic_table["ethnicity_at_recruitment"] != 1] <- 0
+# demographic_table$ethnicity_at_recruitment[demographic_table["ethnicity_at_recruitment"] == -1000] <- NA
+demographic_table$ethnicity_at_calib_visit[demographic_table["ethnicity_at_calib_visit"] == -1000] <- NA
+demographic_table$ethnicity_at_imaging_visit1[demographic_table["ethnicity_at_imaging_visit1"] == -1000] <- NA
+
+stroke_tbl_BC <- stroke_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
+  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_stroke = prevalent_status,
+                                                                     incident_status_stroke = incident_status)
+
+IHD_tbl_BC <- IHD_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
+  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_IHD = prevalent_status,
+                                                                     incident_status_IHD = incident_status)
+
+NICM_tbl_BC <- non_IHD_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
+  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_NICM = prevalent_status,
+                                                                     incident_status_NICM = incident_status)
+
+pericard_tbl_BC <- pericardial_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
+  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_pericard = prevalent_status,
+                                                                     incident_status_pericard = incident_status)
+
+HF_tbl_BC <- HF_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
+  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_HF = prevalent_status,
+                                                                     incident_status_HF = incident_status)
+
+myocard_tbl_BC <- HA_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
+  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_myocard_inf = prevalent_status,
+                                                                     incident_status_myocard_inf = incident_status)
+
+diabetes_tbl_BC <- diabetes_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
+  dplyr::select(f.eid, prevalent_status, incident_status) %>% 
+  rename(prev_status_diabetes = prevalent_status, 
+         incident_status_diabetes = incident_status)
+ 
+
+cholesterol_tbl_BC <- cholesterol_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
+  dplyr::select(f.eid, prevalent_status, incident_status) %>% 
+  rename(prev_status_cholesterol = prevalent_status, 
+         incident_status_cholesterol = incident_status)
+
+hypertension_tbl_BC <- hypertension_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
+  dplyr::select(f.eid, prevalent_status, incident_status) %>% 
+  rename(prev_status_hypertension = prevalent_status, 
+         incident_status_hypertension = incident_status)
+
+demographic_table$f.eid <- as.integer(demographic_table$f.eid)
+
+df_list <- list(BC_tbl %>% select(-recruitment_date), 
+                RT_tbl %>% select(-recruitment_date, -prevalent_status, -incident_status, -RT_session_date),
+                demographic_table, diabetes_tbl_BC, hypertension_tbl_BC, cholesterol_tbl_BC,
+                IHD_tbl_BC, NICM_tbl_BC, HF_tbl_BC, stroke_tbl_BC, pericard_tbl_BC, myocard_tbl_BC
+                )
+
+GLM_df <- df_list %>% reduce(full_join, by='f.eid')
+
+tmp <- GLM_df %>% dplyr:: select(contains("status"))
+factor_cols <- names(tmp)
+
+tmp <- GLM_df %>% dplyr:: select(contains("alc"))
+factor_cols <- c(factor_cols, names(tmp))
+
+df1 <- GLM_df %>% dplyr:: select(contains("ethnicity"))
+factor_cols <- c(factor_cols, names(df1))
+
+GLM_df <- GLM_df %>% mutate(across(all_of(factor_cols), factor))
+# data<-replace(df$Marks, df$Marks<0, 0)
+GLM_df$recruitment_date <- ymd(GLM_df$recruitment_date)
+GLM_df$BC_diagnosis_date <- ymd(GLM_df$BC_diagnosis_date)
+# GLM_df$RT_session_date <- ymd(GLM_df$RT_session_date)
+GLM_df$sex <- factor(GLM_df$sex)
+GLM_df$time = as.numeric(difftime(time2 = GLM_df$recruitment_date, time1 = GLM_df$BC_diagnosis_date))
+GLM_df$time[is.na(GLM_df$time)] <- 0
+
+GLM_df <- GLM_df %>%
+  mutate(
+    alc_grouped = case_when(
+      alc_intake_at_recruitment %in% c("6") ~ "Never",     # Group A and B into "Group1"
+      alc_intake_at_recruitment %in% c("4", "5") ~ "Less than once a week",     # Group C and D into "Group2"
+      alc_intake_at_recruitment %in% c("1", "2", "3") ~ "More than once a week",     # Group C and D into "Group2"
+      alc_intake_at_recruitment %in% c("-3") ~ NA,     # Group C and D into "Group2"
+      TRUE ~ alc_intake_at_recruitment                           # Keep other categories as-is
+    )
+  ) %>%
+  mutate(
+    smoking_grouped = case_when(
+      smoking_status_at_recruitment %in% c("0", "1") ~ "Not smoking",     # Group C and D into "Group2"
+      smoking_status_at_recruitment %in% c("2") ~ "Currently smoking",     # Group C and D into "Group2"
+      smoking_status_at_recruitment %in% c("-3") ~ NA,     # Group C and D into "Group2"
+      TRUE ~ smoking_status_at_recruitment                           # Keep other categories as-is
+    )
+  )
+
+# nrow(GLM_df)
+head(GLM_df, 20)
+
+write.table(GLM_df, file = "table_for_regression_models.tsv", sep = "\t")
+saveRDS(GLM_df, file = "table_for_regression_models.rds")
+# readRDS("table_for_regression_models.rds")
+```
 
 ## Baseline Characteristics of Whole and Sub Samples
 
@@ -281,132 +401,36 @@ cat("No of cholesterol patients in whole sample:", sum(cholesterol_tbl_BC$choles
 
 ### Demographics
 
-```{r preprocessing_of_demographics_table}
-tmp <- demographic_table %>% dplyr:: select(contains("status"))
-factor_cols <- names(tmp)
-
-tmp <- demographic_table %>% dplyr:: select(contains("alc"))
-factor_cols <- c(factor_cols, names(tmp))
-
-df1 <- demographic_table %>% dplyr:: select(contains("ethnicity"))
-factor_cols <- c(factor_cols, names(df1))
-
-demographic_table <- demographic_table %>% mutate(across(all_of(factor_cols), factor))
-demographic_table$recruitment_date <- ymd(demographic_table$recruitment_date)
-demographic_table$sex <- factor(demographic_table$sex)
-demographic_table$f.eid <- as.character(demographic_table$f.eid)
-
-demographic_table$ethnicity_at_recruitment[demographic_table["ethnicity_at_recruitment"] == -1000] <- NA
-demographic_table$ethnicity_at_calib_visit[demographic_table["ethnicity_at_calib_visit"] == -1000] <- NA
-demographic_table$ethnicity_at_imaging_visit1[demographic_table["ethnicity_at_imaging_visit1"] == -1000] <- NA
-
-demographic_table$ethnicity_at_recruitment[demographic_table["ethnicity_at_recruitment"] != 1] <- 0
-```
-
 ```{r demographics_whole_sample}
 
-continuous <-select_if(demographic_table, is.numeric)
-summary(continuous)
-st(continuous)
+# datvec = names(GLM_df)
+# elements_2_remove = c("BC_status", "f.eid", "RT_status", "recruitment_date", "BC_diagnosis_date", "time",
+#                       "ethnicity_at_calib_visit", "ethnicity_at_imaging_visit1", "alc_intake_at_calib_visit",
+#                       "alc_intake_at_imaging_visit1", "alc_intake_at_imaging_visit2", "smoking_status_at_calib_visit",
+#                       "smoking_status_at_imaging_visit1", "smoking_status_at_imaging_visit2", "mets_imaging_visit2)
+# datvec = datvec[!(datvec %in% elements_2_remove)]
+# paste(datvec, collapse = " + ")
 
-table_one <- tableby(BC_status ~ ., data = GLM_df %>% select(-ethnicity_at_calib_visit, 
-                                                             -ethnicity_at_calib_visit,
-                                                             -ethnicity_at_imaging_visit1,
-                                                             -alc_intake_at_recruitment,
-                                                             -alc_intake_at_calib_visit,
-                                                             -alc_intake_at_imaging_visit1,
-                                                             -alc_intake_at_imaging_visit2,
-                                                             -smoking_status_at_calib_visit,
-                                                             -smoking_status_at_imaging_visit1,
-                                                             -smoking_status_at_imaging_visit2,
-                                                             -mets_imaging_visit2,
-                                                             -time)) 
-summary(table_one, title = "Gapminder Data")
+# test_df <- GLM_df
+# test_df <- GLM_df %>% dplyr::filter(f.eid %in% BC_ids)
+# test_df <- GLM_df %>% dplyr::filter(f.eid %in% non_BC_ids)
+# test_df <- GLM_df %>% dplyr::filter(f.eid %in% no_RT_and_BC_ids)
+# test_df <- GLM_df %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
 
 
-table_four <- tableby(~BC_status + age_at_recruitment + sex + ethnicity_at_recruitment + deprivation_index, 
-                      data = GLM_df,
-                      numeric.stats=c("N", "median", "q1q3"),) 
+table_for_summary_stats <- tableby(~BC_status + prevalent_status + incident_status + age_at_recruitment + sex + ethnicity_at_recruitment  + education_score + deprivation_index + alc_grouped + smoking_grouped  + mets_imaging_visit1 + + prev_status_diabetes + incident_status_diabetes + prev_status_hypertension + incident_status_hypertension + prev_status_cholesterol + incident_status_cholesterol + prev_status_IHD + incident_status_IHD + prev_status_NICM + incident_status_NICM + prev_status_HF + incident_status_HF + prev_status_stroke + incident_status_stroke + prev_status_pericard + incident_status_pericard + prev_status_myocard_inf + incident_status_myocard_inf, data = test_df,
+                      numeric.stats=c("N", "median", "q1q3"))
 
-sum_table <- summary(table_four, text = NULL)
+sum_table <- summary(table_for_summary_stats, text = NULL)
 sum_table <- as.data.frame(sum_table)
-sum_table
-write.table(sum_table, 'summary_stats_testDF.tsv', sep = "\t")
+View(sum_table)
 
-sink("summary_stats_testDF.txt")
-( summary(table_four) )
-sink()
 
-library(broom)
-glance(summary(table_four))
-# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% BC_ids)
-# continuous <-select_if(demographic_table_BC, is.numeric)
-# summary(continuous)
-
-# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% non_BC_ids)
-# continuous <-select_if(demographic_table_BC, is.numeric)
-# summary(continuous)
-# 
-# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% no_RT_and_BC_ids)
-# continuous <-select_if(demographic_table_BC, is.numeric)
-# summary(continuous)
-# 
-# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
-# continuous <-select_if(demographic_table_BC, is.numeric)
-# summary(continuous)
-
-# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% cmr_ids)
-# continuous <-select_if(demographic_table_BC, is.numeric)
-# summary(continuous)
-
-# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% cmr_no_bc_ids)
-# continuous <-select_if(demographic_table_BC, is.numeric)
-# summary(continuous)
-
-# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% cmr_bc_ids)
-# continuous <-select_if(demographic_table_BC, is.numeric)
-# summary(continuous)
-
-# demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% cmr_bc_but_no_mrt)
-# continuous <-select_if(demographic_table_BC, is.numeric)
-# summary(continuous)
-
-demographic_table_BC <- demographic_table %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
-continuous <-select_if(demographic_table_BC, is.numeric)
-summary(continuous)
-
-# library(ggplot2)
-# ggplot(demographic_table, aes(x = age_at_recruitment)) +
-#     geom_density(alpha = .2, fill = "#FF6666")
-# 
-# ggplot(demographic_table, aes(x = deprivation_index)) +
-#     geom_density(alpha = .2, fill = "#FF6666")
-# 
-# ggplot(demographic_table, aes(x = education_score)) +
-#     geom_density(alpha = .2, fill = "#FF6666")
-# 
-# ggplot(demographic_table, aes(x = mets_imaging_visit1)) +
-#     geom_density(alpha = .2, fill = "#FF6666")
-	
-# options(scipen = 999)
-# ggplot(factor, aes(x = sex)) +
-#     geom_bar(alpha = .8, fill = "blue")
-
-tabyl((demographic_table$sex))
-tabyl((demographic_table$ethnicity_at_recruitment))
-tabyl((demographic_table$alc_intake_at_recruitment))
-tabyl((demographic_table$smoking_status_at_recruitment))
-
-# prop.table(table(demographic_table_BC$sex))
-# prop.table(table(demographic_table_BC$ethnicity_at_recruitment))
-# prop.table(table(demographic_table_BC$alc_intake_at_recruitment))
-# prop.table(table(demographic_table_BC$smoking_status_at_recruitment))
-
-library(janitor)
-tabyl(demographic_table_BC$sex, sort = TRUE)
-tabyl(demographic_table_BC$ethnicity_at_recruitment, sort = TRUE)
-tabyl(demographic_table_BC$alc_intake_at_recruitment, sort = TRUE)
-tabyl(demographic_table_BC$smoking_status_at_recruitment, sort = TRUE)
+# write.table(sum_table, 'summary_stats_whole_sample.tsv', sep = "\t")
+# write.table(sum_table, 'summary_stats_BC_patients.tsv', sep = "\t")
+# write.table(sum_table, 'summary_stats_no_BC_patients.tsv', sep = "\t")
+# write.table(sum_table, 'summary_stats_BC_but_no_MRT_patients.tsv', sep = "\t")
+# write.table(sum_table, 'summary_stats_BC_and_MRT_patients.tsv', sep = "\t")
 
 ```
 
@@ -416,198 +440,50 @@ tabyl(demographic_table_BC$smoking_status_at_recruitment, sort = TRUE)
 
 ```{r cmr_descriptive_stats}
 
-# ggplot(cmr_measures_tbl, aes(x = LVEDVI)) +
-#     geom_density(alpha = .2, fill = "purple")
-# ggplot(cmr_measures_tbl, aes(x = LV_mass2)) +
-#     geom_density(alpha = .2, fill = "purple")
-# ggplot(cmr_measures_tbl, aes(x = LVEF)) +
-#     geom_density(alpha = .2, fill = "purple")
-# ggplot(cmr_measures_tbl, aes(x = LVGFI)) +
-#     geom_density(alpha = .2, fill = "purple")
-# ggplot(cmr_measures_tbl, aes(x = GLS)) +
-#     geom_density(alpha = .2, fill = "purple")
+# test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_ids)
+# test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_no_bc_ids)
+# test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_bc_but_no_mrt)
+# test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
+nrow(test_df)
 
-summary(cmr_measures_tbl)
+table_for_summary_stats <- tableby(~BC_status + prevalent_status + incident_status + age_at_recruitment + sex + ethnicity_at_recruitment  + education_score + deprivation_index + alc_grouped + smoking_grouped  + mets_imaging_visit1 + + prev_status_diabetes + incident_status_diabetes + prev_status_hypertension + incident_status_hypertension + prev_status_cholesterol + incident_status_cholesterol + prev_status_IHD + incident_status_IHD + prev_status_NICM + incident_status_NICM + prev_status_HF + incident_status_HF + prev_status_stroke + incident_status_stroke + prev_status_pericard + incident_status_pericard + prev_status_myocard_inf + incident_status_myocard_inf, data = test_df,
+                      numeric.stats=c("N", "median", "q1q3"))
 
-BC_CMR_tbl <- cmr_measures_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
-summary(BC_CMR_tbl)
+sum_table <- summary(table_for_summary_stats, text = NULL)
+sum_table <- as.data.frame(sum_table)
+View(sum_table)
 
-BC_CMR_tbl <- cmr_measures_tbl %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
-summary(BC_CMR_tbl)
+# write.table(sum_table, 'summary_stats_CMR-whole_sample.tsv', sep = "\t")
+# write.table(sum_table, 'summary_stats_CMR-BC_patients.tsv', sep = "\t")
+# write.table(sum_table, 'summary_stats_CMR-no_BC_patients.tsv', sep = "\t")
+# write.table(sum_table, 'summary_stats_CMR-BC_but_no_MRT_patients.tsv', sep = "\t")
+# write.table(sum_table, 'summary_stats_CMR-BC_and_MRT_patients.tsv', sep = "\t")
 
-BC_CMR_tbl <- cmr_measures_tbl %>% dplyr::filter(f.eid %in% cmr_bc_ids)
-summary(BC_CMR_tbl)
-
-BC_CMR_tbl <- cmr_measures_tbl %>% dplyr::filter(f.eid %in% cmr_no_bc_ids)
-summary(BC_CMR_tbl)
-
-BC_CMR_tbl <- cmr_measures_tbl %>% dplyr::filter(f.eid %in% cmr_bc_but_no_mrt)
-summary(BC_CMR_tbl)
 ```
 
-
-## Linear Regression Models
-
-### Filtering and Data Wrangling for BC patients
-```{r LM_BC_vs_no_BC}
-
-stroke_tbl_BC <- stroke_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
-  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_stroke = prevalent_status,
-                                                                     incident_status_stroke = incident_status)
-
-IHD_tbl_BC <- IHD_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
-  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_IHD = prevalent_status,
-                                                                     incident_status_IHD = incident_status)
-
-NICM_tbl_BC <- non_IHD_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
-  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_NICM = prevalent_status,
-                                                                     incident_status_NICM = incident_status)
-
-pericard_tbl_BC <- pericardial_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
-  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_pericard = prevalent_status,
-                                                                     incident_status_pericard = incident_status)
-
-HF_tbl_BC <- HF_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
-  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_HF = prevalent_status,
-                                                                     incident_status_HF = incident_status)
-
-myocard_tbl_BC <- HA_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
-  dplyr::select(f.eid, prevalent_status, incident_status) %>% rename(prev_status_myocard_inf = prevalent_status,
-                                                                     incident_status_myocard_inf = incident_status)
-
-diabetes_tbl_BC <- diabetes_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
-  dplyr::select(f.eid, diabetes_status)
-
-cholesterol_tbl_BC <- cholesterol_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
-  dplyr::select(f.eid, cholesterol_status)
-
-hypertension_tbl_BC <- hypertension_tbl %>% # dplyr::filter(f.eid %in% BC_ids) %>% 
-  dplyr::select(f.eid, hypertension_status)
-
-demographic_table$f.eid <- as.integer(demographic_table$f.eid)
-
-df_list <- list(
-                BC_tbl %>% select(-recruitment_date), 
-                RT_tbl %>% select(-recruitment_date, -prevalent_status, -incident_status, -RT_session_date),
-                demographic_table, diabetes_tbl_BC, hypertension_tbl_BC, cholesterol_tbl_BC,
-                IHD_tbl_BC, NICM_tbl_BC, HF_tbl_BC, stroke_tbl_BC, pericard_tbl_BC, myocard_tbl_BC
-                )
-
-GLM_df <- df_list %>% reduce(full_join, by='f.eid')
-
-tmp <- GLM_df %>% dplyr:: select(contains("status"))
-factor_cols <- names(tmp)
-
-tmp <- GLM_df %>% dplyr:: select(contains("alc"))
-factor_cols <- c(factor_cols, names(tmp))
-
-df1 <- GLM_df %>% dplyr:: select(contains("ethnicity"))
-factor_cols <- c(factor_cols, names(df1))
-
-GLM_df <- GLM_df %>% mutate(across(all_of(factor_cols), factor))
-# data<-replace(df$Marks, df$Marks<0, 0)
-GLM_df$recruitment_date <- ymd(GLM_df$recruitment_date)
-GLM_df$BC_diagnosis_date <- ymd(GLM_df$BC_diagnosis_date)
-GLM_df$RT_session_date <- ymd(GLM_df$RT_session_date)
-GLM_df$sex <- factor(GLM_df$sex)
-GLM_df$time = as.numeric(difftime(time2 = GLM_df$recruitment_date, time1 = GLM_df$BC_diagnosis_date))
-GLM_df$time[is.na(GLM_df$time)] <- 0
-# nrow(GLM_df)
-head(GLM_df, 20)
-
-# write.table(GLM_df, file = "table_for_regression_models.tsv", sep = "\t")
-# saveRDS(GLM_df, file = "table_for_regression_models.rds")
-# readRDS("table_for_regression_models.rds")
-```
-
-#### Linear Regression Models
+### Linear Regression Models
 
 ```{r lin_regression_model}
 
-names(GLM_df)
-
-## Stroke
-test_df <- GLM_df %>% 
-  select(f.eid, BC_status, prev_status_stroke, incident_status_stroke, 
-         age_at_recruitment, sex) %>%
-  filter(prev_status_stroke==0)
-head(test_df)
-
-formula = incident_status_stroke ~ BC_status + age_at_recruitment + sex
-model1 <- glm(formula, data = test_df, family = "binomial")
-summary(model1)
-table_of_model <- tidy(model1)
-
-test_df <- GLM_df %>% 
-  select(f.eid, BC_status, prev_status_myocard_inf, incident_status_myocard_inf, 
-         age_at_recruitment, sex) %>% filter(prev_status_myocard_inf==0)
-
-formula = incident_status_myocard_inf ~ BC_status + age_at_recruitment + sex
-model1 <- glm(formula, data = test_df, family = "binomial")
-summary(model1)
-table_of_model <- tidy(model1)
-# table_of_model
-
-test_df <- GLM_df %>% 
-  select(f.eid, BC_status, prev_status_pericard, incident_status_pericard, 
-         age_at_recruitment, sex) %>% filter(prev_status_pericard==0)
-
-formula = incident_status_pericard ~ BC_status + age_at_recruitment + sex
-model1 <- glm(formula, data = test_df, family = "binomial")
-summary(model1)
-table_of_model <- tidy(model1)
-
-test_df <- GLM_df %>% 
-  select(f.eid, BC_status, prev_status_HF, incident_status_HF, 
-         age_at_recruitment, sex) %>% filter(prev_status_HF==0)
-
-formula = incident_status_HF ~ BC_status + age_at_recruitment + sex
-model1 <- glm(formula, data = test_df, family = "binomial")
-summary(model1)
-table_of_model <- tidy(model1)
-
-test_df <- GLM_df %>% 
-  select(f.eid, BC_status, prev_status_NICM, incident_status_NICM, 
-         age_at_recruitment, sex) %>% filter(prev_status_NICM==0)
-
-formula = incident_status_NICM ~ BC_status + age_at_recruitment + sex
-model1 <- glm(formula, data = test_df, family = "binomial")
-summary(model1)
-table_of_model <- tidy(model1)
-
-# IHD
-test_df <- GLM_df %>% 
-  select(f.eid, BC_status, prev_status_IHD, incident_status_IHD, 
-         age_at_recruitment, sex) %>% filter(prev_status_IHD==0)
-
-formula = incident_status_IHD ~ BC_status + age_at_recruitment + sex
-model1 <- glm(formula, data = test_df, family = "binomial")
-summary(model1)
-table_of_model <- tidy(model1)
-
-# table_of_model
-
 cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
+
 formula = LVEDVI ~ BC_status + age_at_recruitment + sex
 model1 <- glm(formula, data = cmr_df)
 summary(model1)
 
-cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
 formula = LV_mass2 ~ BC_status + age_at_recruitment + sex
 model1 <- glm(formula, data = cmr_df)
 summary(model1)
 
-cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
 formula = LVEF ~ BC_status + age_at_recruitment + sex
 model1 <- glm(formula, data = cmr_df)
 summary(model1)
 
-cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
 formula = LVGFI ~ BC_status + age_at_recruitment + sex
 model1 <- glm(formula, data = cmr_df)
 summary(model1)
 
-cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
 formula = GLS ~ BC_status + age_at_recruitment + sex
 model1 <- glm(formula, data = cmr_df)
 summary(model1)
@@ -616,7 +492,7 @@ formula = GLS ~ BC_status + age_at_recruitment + sex +
   smoking_status_at_recruitment + alc_intake_at_recruitment + 
   mets_imaging_visit1 + 
   deprivation_index + ethnicity_at_recruitment +
-  diabetes_status + cholesterol_status + hypertension_status
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
 model1 <- glm(formula, data = cmr_df)
 summary(model1)
 
@@ -635,6 +511,11 @@ names(cmr_measures_tbl)
 
 ```{r cox_regressions}
 
+library(survival)
+library(broom)
+library(purrr)
+
+
 ### NICM
 #### Model 1
 test_df <- GLM_df %>% 
@@ -644,7 +525,9 @@ test_df <- GLM_df %>%
 formula = Surv(time, as.numeric(incident_status_NICM)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
 summary(res.cox)
-### ALCOHOL INTAKE AS ORDINAL OR FACTOR -> DIFFERENCE IN RESULTS ???
+
+cox_models <- list(res.cox)
+
 
 #### Model 2
 test_df <- GLM_df %>% 
@@ -661,6 +544,8 @@ formula = Surv(time, as.numeric(incident_status_NICM)) ~ BC_status +
   deprivation_index + ethnicity_at_recruitment +
   diabetes_status + cholesterol_status + hypertension_status
 res.cox  <- coxph(formula, data = test_df)
+cox_models <- c(cox_models, res.cox)
+
 summary(res.cox)
 
 ### IHD
@@ -671,6 +556,7 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_IHD)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
+cox_models <- c(cox_models, res.cox)
 summary(res.cox)
 
 #### Model 2
@@ -688,6 +574,7 @@ formula = Surv(time, as.numeric(incident_status_IHD)) ~ BC_status +
   deprivation_index + ethnicity_at_recruitment +
   diabetes_status + cholesterol_status + hypertension_status
 res.cox  <- coxph(formula, data = test_df)
+cox_models <- c(cox_models, res.cox)
 summary(res.cox)
 
 ### Stroke
@@ -697,6 +584,7 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_stroke)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
+cox_models <- c(cox_models, res.cox)
 summary(res.cox)
 
 #### Model 2
@@ -714,6 +602,7 @@ formula = Surv(time, as.numeric(incident_status_stroke)) ~ BC_status +
   deprivation_index + ethnicity_at_recruitment +
   diabetes_status + cholesterol_status + hypertension_status
 res.cox  <- coxph(formula, data = test_df)
+cox_models <- c(cox_models, res.cox)
 summary(res.cox)
 
 ### PERICARDIAL DISEASE
@@ -724,6 +613,7 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_pericard)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
+cox_models <- c(cox_models, res.cox)
 summary(res.cox)
 
 #### Model 2
@@ -741,6 +631,7 @@ formula = Surv(time, as.numeric(incident_status_pericard)) ~ BC_status +
   deprivation_index + ethnicity_at_recruitment +
   diabetes_status + cholesterol_status + hypertension_status
 res.cox  <- coxph(formula, data = test_df)
+cox_models <- c(cox_models, res.cox)
 summary(res.cox)
 
 ### MYOCARDIAL INFARCTION
@@ -751,6 +642,7 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_myocard_inf)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
+cox_models <- c(cox_models, res.cox)
 summary(res.cox)
 
 
@@ -769,6 +661,7 @@ formula = Surv(time, as.numeric(incident_status_myocard_inf)) ~ BC_status +
   deprivation_index + ethnicity_at_recruitment +
   diabetes_status + cholesterol_status + hypertension_status
 res.cox  <- coxph(formula, data = test_df)
+cox_models <- c(cox_models, res.cox)
 summary(res.cox)
 
 
@@ -780,12 +673,8 @@ test_df <- GLM_df %>%
 
 formula = Surv(time, as.numeric(incident_status_HF)) ~ BC_status + age_at_recruitment + sex
 res.cox  <- coxph(formula, data = test_df)
-x <- summary(res.cox)
-x
-signif(x$conf.int[,"lower .95"], 2)
-signif(x$conf.int[,"upper .95"],2)
-
-
+cox_models <- c(cox_models, res.cox)
+summary(res.cox)
 
 #### Model 2
 test_df <- GLM_df %>% 
@@ -802,7 +691,16 @@ formula = Surv(time, as.numeric(incident_status_HF)) ~ BC_status +
   deprivation_index + ethnicity_at_recruitment +
   diabetes_status + cholesterol_status + hypertension_status
 res.cox  <- coxph(formula, data = test_df)
+cox_models <- c(cox_models, res.cox)
 summary(res.cox)
+
+# Apply tidy() to each model and store the results in a list
+tidy_results <- map(cox_models, tidy)
+# Combine the results into a single data frame
+overview_table <- bind_rows(tidy_results, .id = "Model")
+
+# Print the overview table
+print(overview_table)
 ```
 
 ## Fine Gray Compete Risk Regressions
@@ -811,6 +709,47 @@ summary(res.cox)
 
 ```
 
+
+## Plots for CMR measures regression results
+
+```{r}
+### code snippet from LILIANA
+
+# Create a function to make the plots
+plot_type <- function(df, chamber_vars, chamber_name) {
+  # Filter the dataframe based on the cardiac chamber
+  df <- df %>% filter(cmr_var %in% chamber_vars)
+
+  # Convert cmr_var to a factor and specify the levels
+  df$cmr_var <- factor(df$cmr_var, levels = rev(chamber_vars))
+
+  # Create the plot
+  p <- ggplot(df, aes(x = cmr_var, y = estimate, color = term)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+    scale_color_manual(values = c("#28ae80", "#2c728e", "#472d7b")) +
+    labs(title = paste0(chamber_name, " association with sports type"), 
+         x = "CMR Variable", y = "Beta coefficient", color = "Sport type") +
+    theme_minimal() +
+    theme(legend.position = "right") +
+    coord_flip()
+
+  return(p)
+}
+
+ 
+
+# Now you can call the function as before
+LV_plot <- plot_type(sport_type_results, LV_vars, "LV")
+RV_plot <- plot_type(sport_type_results, RV_vars, "RV")
+LA_plot <- plot_type(sport_type_results, LA_vars, "LA")
+RA_plot <- plot_type(sport_type_results, RA_vars, "RA")
+
+ 
+
+# Display the plots
+gridExtra::grid.arrange(LV_plot, RV_plot, LA_plot, RA_plot, ncol = 1)
+```
 
 
 
