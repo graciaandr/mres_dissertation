@@ -209,7 +209,7 @@ saveRDS(GLM_df, file = "table_for_regression_models.rds")
 # datvec = datvec[!(datvec %in% elements_2_remove)]
 # paste(datvec, collapse = " + ")
 
-# test_df <- GLM_df
+test_df <- GLM_df
 # test_df <- GLM_df %>% dplyr::filter(f.eid %in% BC_ids)
 # test_df <- GLM_df %>% dplyr::filter(f.eid %in% non_BC_ids)
 # test_df <- GLM_df %>% dplyr::filter(f.eid %in% no_RT_and_BC_ids)
@@ -261,103 +261,163 @@ View(sum_table)
 ## Linear Regression Models for CMR measures
 
 ```{r}
-GLM_df <- GLM_df %>% dplyr::filter(f.eid %in% BC_ids)
+# GLM_df <- GLM_df %>% dplyr::filter(f.eid %in% BC_ids)
+GLM_df
+cmr_measures_tbl
+
+cmr_df <- inner_join(cmr_measures_tbl, GLM_df, by = "f.eid")
+cmr_df
 ```
 
 
 
 ```{r lin_regression_model}
 
-cmr_df <- full_join(cmr_measures_tbl, GLM_df, by = "f.eid")
+# cmr_df <- inner_join(cmr_measures_tbl, GLM_df, by = "f.eid")
+lin_models <- list()
 
+
+### LVEDVI
+#### MODEL 1
 formula = LVEDVI ~ BC_status + age_at_recruitment + sex
 model1 <- glm(formula, data = cmr_df)
-summary(model1)
+lin_models <- c(lin_models, list(model1))
+# summary(model1)
 
+### MODEL 2
+formula = LVEDVI ~ BC_status + age_at_recruitment + sex + 
+  smoking_status_at_recruitment + alc_intake_at_recruitment + 
+  mets_imaging_visit1 + 
+  deprivation_index + ethnicity_at_recruitment +
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
+model1 <- glm(formula, data = cmr_df)
+lin_models <- c(lin_models, list(model1))
+# summary(model1)
+
+### LV MASS
+#### MODEL 1
 formula = LV_mass2 ~ BC_status + age_at_recruitment + sex
 model1 <- glm(formula, data = cmr_df)
-summary(model1)
+lin_models <- c(lin_models, list(model1))
+# summary(model1)
 
+### MODEL 2
+formula = LV_mass2 ~ BC_status + age_at_recruitment + sex + 
+  smoking_status_at_recruitment + alc_intake_at_recruitment + 
+  mets_imaging_visit1 + 
+  deprivation_index + ethnicity_at_recruitment +
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
+model1 <- glm(formula, data = cmr_df)
+lin_models <- c(lin_models, list(model1))
+# summary(model1)
+
+### LVEV
+#### MODEL 1
 formula = LVEF ~ BC_status + age_at_recruitment + sex
 model1 <- glm(formula, data = cmr_df)
-summary(model1)
+lin_models <- c(lin_models, list(model1))
+# summary(model1)
 
+#### MODEL 2
+formula = LVEF ~ BC_status + age_at_recruitment + sex + 
+  smoking_status_at_recruitment + alc_intake_at_recruitment + 
+  mets_imaging_visit1 + 
+  deprivation_index + ethnicity_at_recruitment +
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
+model1 <- glm(formula, data = cmr_df)
+lin_models <- c(lin_models, list(model1))
+# summary(model1)
+
+### LVGFI
+#### MODEL 1
 formula = LVGFI ~ BC_status + age_at_recruitment + sex
 model1 <- glm(formula, data = cmr_df)
-summary(model1)
+lin_models <- c(lin_models, list(model1))
+# summary(model1)
 
+#### MODEL 2
+formula = LVGFI ~ BC_status + age_at_recruitment + sex + 
+  smoking_status_at_recruitment + alc_intake_at_recruitment + 
+  mets_imaging_visit1 + 
+  deprivation_index + ethnicity_at_recruitment +
+  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
+model1 <- glm(formula, data = cmr_df)
+lin_models <- c(lin_models, list(model1))
+# summary(model1)
+
+### GLS
+#### MODEL 1
 formula = GLS ~ BC_status + age_at_recruitment + sex
 model1 <- glm(formula, data = cmr_df)
-summary(model1)
+lin_models <- c(lin_models, list(model1))
+# summary(model1)
 
+#### MODEL 2
 formula = GLS ~ BC_status + age_at_recruitment + sex + 
   smoking_status_at_recruitment + alc_intake_at_recruitment + 
   mets_imaging_visit1 + 
   deprivation_index + ethnicity_at_recruitment +
   prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
 model1 <- glm(formula, data = cmr_df)
-summary(model1)
+lin_models <- c(lin_models, list(model1))
+# summary(model1)
 
-x <- summary(model1)
-x
-signif(x$conf.int[,"lower .95"], 2)
-signif(x$conf.int[,"upper .95"],2)
-
-## try Cox regression next
-## then Fine Gray (compete risk) regression
-# cmr_measures_tbl$LVGFI
-names(cmr_measures_tbl)
 ```
 
 
 ```{r}
-# Load necessary packages (if not already loaded)
-library(dplyr)
 
-# Sample data
-data <- mtcars  # Use the 'mtcars' dataset as an example
+# Step 1: Create a list of Cox models (you should have your own list)
+print(length(lin_models))
 
-# Step 1: Create a list of linear regression models (you should have your own list)
-lm_models_list <- list(
-  model1 = lm(mpg ~ wt + hp, data = data),
-  model2 = lm(mpg ~ wt + hp + qsec, data = data)
-  # Add more linear regression models as needed
-)
+# Specify the list of terms (variables) you want to include in the final merged table
+selected_terms <- c("BC_status1", "sex", "age_at_recruitment")  # Adjust this list as needed
 
-# Specify the list of predictors (variables) you want to include in the final merged table
-selected_predictors <- c("wt", "hp")  # Adjust this list as needed
 
 # Step 2: Extract coefficients, p-values, and confidence intervals from each model
 extract_model_info <- function(model) {
-  summary_info <- summary(model)
-  coef_table <- coef(summary_info)
-  conf_interval_table <- confint(model)
-  p_value_table <- coef_table[, "Pr(>|t|)"]
+  model_summary <- summary(model)
+  coef_table <- as.data.frame(model_summary$coefficients)
+  conf_interval_table <- as.data.frame(model_summary$conf.int)
+  p_value_table <- as.data.frame(model_summary$coefficients[, "Pr(>|z|)"])
   
   # Combine the extracted information
   model_info <- data.frame(
-    predictor = rownames(coef_table),
-    coef = coef_table[, "Estimate"],
-    conf_low = conf_interval_table[, 1],
-    conf_high = conf_interval_table[, 2],
+    coef_identifier = rownames(coef_table),
+    coef = coef_table[, "coef"],
+    conf_low = conf_interval_table[, "lower .95"],
+    conf_high = conf_interval_table[, "upper .95"],
     p_value = p_value_table
   )
+  
+  # Format the p-values and include significance levels
+  formatted_p_values <- format.pval(p_value_table, digits = 3)
+  significance_levels <- ifelse(p_value_table < 0.001, "***",
+                                 ifelse(p_value_table < 0.01, "**",
+                                        ifelse(p_value_table < 0.05, "*", "")))
+  
+  # Combine the formatted p-values and significance levels with the extracted information
+  model_info$p_value <- formatted_p_values
+  model_info$significance <- significance_levels
   
   return(model_info)
 }
 
-# Step 3: Extract information from each linear regression model and filter for selected predictors
-extracted_info_list <- lapply(lm_models_list, extract_model_info)
+# Step 3: Extract information from each Cox model and filter for selected terms
+extracted_info_list <- lapply(cox_models, extract_model_info)
 filtered_info_list <- lapply(extracted_info_list, function(info) {
-  filter(info, predictor %in% selected_predictors)
+  filter(info, coef_identifier %in% selected_terms)
 })
 
 # Step 4: Combine the filtered information into a single data frame
 combined_info <- do.call(rbind, filtered_info_list)
 
-# Print the combined table with coefficients, confidence intervals, and p-values for selected predictors
+# Print the combined table with coefficients, confidence intervals, and p-values for selected terms
 print(combined_info)
 
+
+# write.table(combined_info, file = "results_cox_regressions_table.tsv", sep = "\t")
+# saveRDS(combined_info, file = "results_cox_regressions_table.rds")
 ```
 
 ## Cox Regression Models for CVD outcomes
@@ -585,6 +645,9 @@ combined_info <- do.call(rbind, filtered_info_list)
 
 # Print the combined table with coefficients, confidence intervals, and p-values for selected terms
 print(combined_info)
+
+# write.table(combined_info, file = "results_cox_regressions_table.tsv", sep = "\t")
+# saveRDS(combined_info, file = "results_cox_regressions_table.rds")
 ```
 
 
