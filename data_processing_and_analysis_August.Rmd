@@ -19,6 +19,7 @@ library(vtable)
 library(survival)
 library(broom)
 library(purrr)
+library(arsenal)
 
 setwd("/Users/BHCadmin/Documents/mres_gracia/")
 ```
@@ -27,7 +28,7 @@ setwd("/Users/BHCadmin/Documents/mres_gracia/")
 ```{r}
 demographic_table <- read.csv("upd_demographics_table_UKB_data.tsv", header = T, sep = "\t")
 cmr_measures_tbl <- read.csv("CMR_patients_in_UKB.tsv", header = T, sep = "\t")
-
+bmi_tbl <- read.csv("BMI_of_patients_in_UKB.tsv", sep = "\t")
 diabetes_tbl = read.csv("updated_diabetes_tbl.tsv", sep = "\t")
 hypertension_tbl = read.csv("updated_hypertension_tbl.tsv", sep = "\t")
 cholesterol_tbl = read.csv("updated_cholesterol_tbl.tsv", sep = "\t")
@@ -74,7 +75,7 @@ length(cmr_bc_but_no_mrt)
 
 sample_df <- read.csv("analysis_sample_UKB_patients.tsv", sep = "\t")
 
-GLM_df <- readRDS("table_for_regression_models.rds")
+# GLM_df <- readRDS("table_for_regression_models.rds")
 
 ```
 
@@ -144,7 +145,7 @@ demographic_table$f.eid <- as.integer(demographic_table$f.eid)
 
 df_list <- list(BC_tbl %>% select(-recruitment_date), 
                 RT_tbl %>% select(-recruitment_date, -prevalent_status, -incident_status, -RT_session_date),
-                demographic_table, diabetes_tbl_BC, hypertension_tbl_BC, cholesterol_tbl_BC,
+                demographic_table, bmi_tbl, diabetes_tbl_BC, hypertension_tbl_BC, cholesterol_tbl_BC,
                 IHD_tbl_BC, NICM_tbl_BC, HF_tbl_BC, stroke_tbl_BC, pericard_tbl_BC, myocard_tbl_BC
                 )
 
@@ -216,7 +217,7 @@ test_df <- GLM_df
 # test_df <- GLM_df %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
 
 
-table_for_summary_stats <- tableby(~BC_status + prevalent_status + incident_status + age_at_recruitment + sex + ethnicity_at_recruitment  + education_score + deprivation_index + alc_grouped + smoking_grouped  + mets_imaging_visit1 + + prev_status_diabetes + incident_status_diabetes + prev_status_hypertension + incident_status_hypertension + prev_status_cholesterol + incident_status_cholesterol + prev_status_IHD + incident_status_IHD + prev_status_NICM + incident_status_NICM + prev_status_HF + incident_status_HF + prev_status_stroke + incident_status_stroke + prev_status_pericard + incident_status_pericard + prev_status_myocard_inf + incident_status_myocard_inf, data = test_df,
+table_for_summary_stats <- tableby(~BC_status + prevalent_status + incident_status + age_at_recruitment + sex + ethnicity_at_recruitment  + education_score + deprivation_index + alc_grouped + smoking_grouped  + mets_imaging_visit1 + bmi_recruitment+ prev_status_diabetes + incident_status_diabetes + prev_status_hypertension + incident_status_hypertension + prev_status_cholesterol + incident_status_cholesterol + prev_status_IHD + incident_status_IHD + prev_status_NICM + incident_status_NICM + prev_status_HF + incident_status_HF + prev_status_stroke + incident_status_stroke + prev_status_pericard + incident_status_pericard + prev_status_myocard_inf + incident_status_myocard_inf, data = test_df,
                       numeric.stats=c("N", "median", "q1q3"))
 
 sum_table <- summary(table_for_summary_stats, text = NULL)
@@ -648,13 +649,6 @@ print(combined_info)
 
 # write.table(combined_info, file = "results_cox_regressions_table.tsv", sep = "\t")
 # saveRDS(combined_info, file = "results_cox_regressions_table.rds")
-```
-
-
-## Fine Gray Compete Risk Regressions
-
-```{r}
-
 ```
 
 
