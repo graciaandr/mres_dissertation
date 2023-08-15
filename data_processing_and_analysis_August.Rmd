@@ -211,21 +211,20 @@ head(GLM_df, 20)
 # paste(datvec, collapse = " + ")
 
 test_df <- GLM_df
-# test_df <- GLM_df %>% dplyr::filter(f.eid %in% BC_ids)
-# test_df <- GLM_df %>% dplyr::filter(f.eid %in% non_BC_ids)
-# test_df <- GLM_df %>% dplyr::filter(f.eid %in% no_RT_and_BC_ids)
-# test_df <- GLM_df %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
+test_df <- GLM_df %>% dplyr::filter(f.eid %in% BC_ids)
+test_df <- GLM_df %>% dplyr::filter(f.eid %in% non_BC_ids)
+test_df <- GLM_df %>% dplyr::filter(f.eid %in% no_RT_and_BC_ids)
+test_df <- GLM_df %>% dplyr::filter(f.eid %in% RT_and_BC_ids)
 
-
-table_for_summary_stats <- tableby(~BC_status + prevalent_status + incident_status + age_at_recruitment + sex + ethnicity_at_recruitment  + education_score + deprivation_index + alc_grouped + smoking_grouped  + mets_imaging_visit1 + bmi_recruitment+ prev_status_diabetes + incident_status_diabetes + prev_status_hypertension + incident_status_hypertension + prev_status_cholesterol + incident_status_cholesterol + prev_status_IHD + incident_status_IHD + prev_status_NICM + incident_status_NICM + prev_status_HF + incident_status_HF + prev_status_stroke + incident_status_stroke + prev_status_pericard + incident_status_pericard + prev_status_myocard_inf + incident_status_myocard_inf, data = test_df,
-                      numeric.stats=c("N", "median", "q1q3"))
+table_for_summary_stats <- tableby(~BC_status + prevalent_status + incident_status + age_at_recruitment + sex + ethnicity_at_recruitment  + education_score + deprivation_index + alc_grouped + smoking_grouped  + mets_imaging_visit1 + bmi_recruitment + prev_status_diabetes + incident_status_diabetes + prev_status_hypertension + incident_status_hypertension + prev_status_cholesterol + incident_status_cholesterol + prev_status_IHD + incident_status_IHD + prev_status_NICM + incident_status_NICM + prev_status_HF + incident_status_HF + prev_status_stroke + incident_status_stroke + prev_status_pericard + incident_status_pericard + prev_status_myocard_inf + incident_status_myocard_inf, data = test_df,
+                      numeric.stats=c("median", "q1q3"), na.tableby(FALSE))
 
 sum_table <- summary(table_for_summary_stats, text = NULL)
 sum_table <- as.data.frame(sum_table)
 View(sum_table)
 
 
-# write.table(sum_table, 'summary_stats_whole_sample.tsv', sep = "\t")
+write.table(sum_table, 'summary_stats_whole_sample.tsv', sep = "\t")
 # write.table(sum_table, 'summary_stats_BC_patients.tsv', sep = "\t")
 # write.table(sum_table, 'summary_stats_no_BC_patients.tsv', sep = "\t")
 # write.table(sum_table, 'summary_stats_BC_but_no_MRT_patients.tsv', sep = "\t")
@@ -237,15 +236,17 @@ View(sum_table)
 
 ```{r cmr_descriptive_stats}
 
-# test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_ids)
-# test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_ids)
+test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_bc_ids)
 test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_no_bc_ids)
-# test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_bc_but_no_mrt)
-# test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
-nrow(test_df)
+test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_bc_but_no_mrt)
+test_df <- GLM_df %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
 
-table_for_summary_stats <- tableby(~BC_status + prevalent_status + incident_status + age_at_recruitment + sex + ethnicity_at_recruitment  + education_score + deprivation_index + alc_grouped + smoking_grouped  + mets_imaging_visit1 + BMI + prev_status_diabetes + incident_status_diabetes + prev_status_hypertension + incident_status_hypertension + prev_status_cholesterol + incident_status_cholesterol + prev_status_IHD + incident_status_IHD + prev_status_NICM + incident_status_NICM + prev_status_HF + incident_status_HF + prev_status_stroke + incident_status_stroke + prev_status_pericard + incident_status_pericard + prev_status_myocard_inf + incident_status_myocard_inf, data = test_df,
-                      numeric.stats=c("N", "median", "q1q3"))
+# Remove rows with missing values
+# test_df <- na.omit(test_df)
+
+table_for_summary_stats <- tableby(~BC_status + prevalent_status + incident_status + age_at_recruitment + sex + ethnicity_at_recruitment  + education_score + deprivation_index + alc_grouped + smoking_grouped  + mets_imaging_visit1 + bmi_recruitment + prev_status_diabetes + incident_status_diabetes + prev_status_hypertension + incident_status_hypertension + prev_status_cholesterol + incident_status_cholesterol + prev_status_IHD + incident_status_IHD + prev_status_NICM + incident_status_NICM + prev_status_HF + incident_status_HF + prev_status_stroke + incident_status_stroke + prev_status_pericard + incident_status_pericard + prev_status_myocard_inf + incident_status_myocard_inf, data = test_df,
+                      numeric.stats=c("N", "median", "q1q3"), na.tableby(FALSE))
 
 sum_table <- summary(table_for_summary_stats, text = NULL)
 sum_table <- as.data.frame(sum_table)
@@ -262,10 +263,30 @@ View(sum_table)
 ## Linear Regression Models for CMR measures
 
 ```{r}
-# GLM_df <- GLM_df %>% dplyr::filter(f.eid %in% BC_ids)
-# names(GLM_df)
+
 cmr_df <- inner_join(cmr_measures_tbl, GLM_df, by = "f.eid")
-names(cmr_df)
+# names(cmr_df)
+
+
+test_df <- cmr_df %>% dplyr::filter(f.eid %in% cmr_ids)
+test_df <- cmr_df %>% dplyr::filter(f.eid %in% cmr_bc_ids)
+test_df <- cmr_df %>% dplyr::filter(f.eid %in% cmr_no_bc_ids)
+test_df <- cmr_df %>% dplyr::filter(f.eid %in% cmr_bc_but_no_mrt)
+test_df <- cmr_df %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
+# names(test_df)
+
+table_for_summary_stats <- tableby(~LVEDVI + LV_mass2 + LVEF + LVGFI + GLS, data = test_df,
+                      numeric.stats=c("median", "q1q3"), na.tableby(FALSE))
+
+sum_table <- summary(table_for_summary_stats, text = NULL)
+sum_table <- as.data.frame(sum_table)
+View(sum_table)
+
+# write.table(sum_table, 'cmr_stats_CMR-whole_sample.tsv', sep = "\t")
+# write.table(sum_table, 'cmr_stats_CMR-BC_patients.tsv', sep = "\t")
+# write.table(sum_table, 'cmr_stats_CMR-no_BC_patients.tsv', sep = "\t")
+# write.table(sum_table, 'cmr_stats_CMR-BC_but_no_MRT_patients.tsv', sep = "\t")
+# write.table(sum_table, 'cmr_stats_CMR-BC_and_MRT_patients.tsv', sep = "\t")
 ```
 
 
