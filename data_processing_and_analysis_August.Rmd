@@ -269,12 +269,11 @@ test_df <- cmr_df %>% dplyr::filter(f.eid %in% cmr_no_bc_ids)
 test_df <- cmr_df %>% dplyr::filter(f.eid %in% cmr_bc_rt_ids)
 test_df <- cmr_df %>% dplyr::filter(f.eid %in% cmr_bc_but_no_mrt)
 
-summary(cmr_df %>%select(LVEDVI, LV_mass2, LVEF, LVGFI, GLS)) %>% table()
 summary_cmr_measures <- tableby(~LVEDVI +  LV_mass2 + LVEF + LVGFI + GLS,
         numeric.stats=c( "median", "q1q3"), na.tableby(FALSE),
         data = test_df, )
 summary_cmr_measures <- summary(summary_cmr_measures, text = NULL, digits=2) %>% as.data.frame() 
-View(summary_cmr_measures)
+# View(summary_cmr_measures)
 ```
 
 
@@ -448,6 +447,7 @@ for (model_name in names(lin_models)) {
 
 # Specify the list of selected terms (predictors) to filter the combined table
 # selected_terms <- c("BC_status1", "sex", "age_at_recruitment")  # Adjust this list as needed
+# selected_terms <- c("(Intercept)", "BC_status1")  # Adjust this list as needed
 selected_terms <- c("BC_status1")  # Adjust this list as needed
 
 # Filter the combined table to include only the selected terms
@@ -458,6 +458,15 @@ filtered_combined_info <- combined_info %>%
 
 filtered_combined_info$p_value <- as.character(filtered_combined_info$p_value)
 filtered_combined_info <- filtered_combined_info %>% mutate_if(is.numeric, ~round(., 2))
+
+# Calculate standard errors using p-values
+alpha = 0.05  # Significance level
+
+# Calculate z-scores from p-values
+filtered_combined_info$z_score <- qnorm(1 - alpha / 2)  # Two-tailed
+
+# Calculate standard errors
+filtered_combined_info$std.error <- abs(filtered_combined_info$coef / filtered_combined_info$z_score)
 
 View(filtered_combined_info)
 
@@ -1006,8 +1015,7 @@ extract_cox_model_info <- function(model, model_name) {
   conf_interval_table <- confint(model)
   conf_low <- exp(conf_interval_table[, 1])
   conf_high <- exp(conf_interval_table[, 2])
-  print(summary_info)
-  
+
   # Combine the extracted information with the model name
   model_info <- data.frame(
     model = model_name,
@@ -1062,46 +1070,78 @@ write.table(MRT_filtered_cox_combined_info, file = "MRT_noMRT_results_cox_regres
 
 
 
-<!-- ## Plots for CMR measures regression results -->
 
-<!-- ```{r} -->
-<!-- ### code snippet from LILIANA -->
+## Plots for CMR measures regression results
 
-<!-- # Create a function to make the plots -->
-<!-- plot_type <- function(df, chamber_vars, chamber_name) { -->
-<!--   # Filter the dataframe based on the cardiac chamber -->
-<!--   df <- df %>% filter(cmr_var %in% chamber_vars) -->
+```{r}
+### code snippet from LILIANA
 
-<!--   # Convert cmr_var to a factor and specify the levels -->
-<!--   df$cmr_var <- factor(df$cmr_var, levels = rev(chamber_vars)) -->
+# Create a function to make the plots
+plot_type <- function(df, chamber_vars, chamber_name) {
+  # Filter the dataframe based on the cardiac chamber
+  df <- df %>% filter(cmr_var %in% chamber_vars)
 
-<!--   # Create the plot -->
-<!--   p <- ggplot(df, aes(x = cmr_var, y = estimate, color = term)) + -->
-<!--     geom_point() + -->
-<!--     geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) + -->
-<!--     scale_color_manual(values = c("#28ae80", "#2c728e", "#472d7b")) + -->
-<!--     labs(title = paste0(chamber_name, " association with sports type"),  -->
-<!--          x = "CMR Variable", y = "Beta coefficient", color = "Sport type") + -->
-<!--     theme_minimal() + -->
-<!--     theme(legend.position = "right") + -->
-<!--     coord_flip() -->
+  # Convert cmr_var to a factor and specify the levels
+  df$cmr_var <- factor(df$cmr_var, levels = rev(chamber_vars))
 
-<!--   return(p) -->
-<!-- } -->
+  # Create the plot
+  p <- ggplot(data = df, aes(x = cmr_var, y = estimate, color = term)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+    scale_color_manual(values = c("#28ae80", "#2c728e", "#472d7b")) +
+    labs(title = paste0(chamber_name, " association with sports type"),
+         x = "CMR Variable", y = "Beta coefficient", color = "Sport type") +
+    theme_minimal() +
+    theme(legend.position = "right") +
+    coord_flip()
 
-
-
-<!-- # Now you can call the function as before -->
-<!-- LV_plot <- plot_type(sport_type_results, LV_vars, "LV") -->
-<!-- RV_plot <- plot_type(sport_type_results, RV_vars, "RV") -->
-<!-- LA_plot <- plot_type(sport_type_results, LA_vars, "LA") -->
-<!-- RA_plot <- plot_type(sport_type_results, RA_vars, "RA") -->
+  return(p)
+}
 
 
+LV_vars = c("LVEDVI", "LV_mass2", "GLS")
+# Now you can call the function as before
+LV_plot <- plot_type(cmr_df, LV_vars, "LV")
+# RV_plot <- plot_type(sport_type_results, RV_vars, "RV")
+# LA_plot <- plot_type(sport_type_results, LA_vars, "LA")
+# RA_plot <- plot_type(sport_type_results, RA_vars, "RA")
 
-<!-- # Display the plots -->
-<!-- gridExtra::grid.arrange(LV_plot, RV_plot, LA_plot, RA_plot, ncol = 1) -->
-<!-- ``` -->
 
 
+# Display the plots
+gridExtra::grid.arrange(LV_plot, RV_plot, LA_plot, RA_plot, ncol = 1)
+```
+
+
+```{r}
+
+forest_plot <- ggplot(filtered_combined_info %>% filter(grepl("1", model, ignore.case = TRUE)) , 
+                      aes(y = predictor, x = coef)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = coef - 1.96 * std.error, xmax = coef + 1.96 * std.error)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray") +
+  # coord_flip() +
+  facet_wrap(~model, ncol = 1, scales = "free_y") +  # Separate plots for each model
+  labs(title = "Forest Plot of Regression Coefficients",
+       x = "Coefficient Estimate",
+       y = "Variable") +
+  theme_minimal()  # Customize the theme as needed
+
+print(forest_plot)
+
+
+forest_plot <- ggplot(filtered_combined_info %>% filter(grepl("2", model, ignore.case = TRUE)) , 
+                      aes(y = predictor, x = coef)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = coef - 1.96 * std.error, xmax = coef + 1.96 * std.error)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray") +
+  # coord_flip() +
+  facet_wrap(~model, ncol = 1, scales = "free_y") +  # Separate plots for each model
+  labs(title = "Forest Plot of Regression Coefficients",
+       x = "Coefficient Estimate",
+       y = "Variable") +
+  theme_minimal()  # Customize the theme as needed
+
+print(forest_plot)
+```
 
