@@ -455,12 +455,13 @@ extract_cox_model_info <- function(model, model_name) {
   model_info <- data.frame(
     model = model_name,
     predictor = rownames(coef_table),
-    coef = coef_table[, 2], ### exp(coef) is the HR
+    coef = exp(coef_table[, "Estimate"]), ### exp(coef) is the HR
     conf_low = conf_low,
     conf_high = conf_high,
     p_value = p_value_table
 
   )
+  # print(coef_table)
   
   # Format the p-values and include significance levels
   formatted_p_values <- as.numeric(format.pval(p_value_table, digits = 10))
@@ -479,6 +480,8 @@ extract_cox_model_info <- function(model, model_name) {
 # Step 3: Extract information from each Cox model and add the model name
 combined_cox_info <- data.frame()  # Initialize an empty data frame for the combined results
 
+# cox_model2 <- cox_models[1]
+
 # Extract information from each named Cox model and add it to the combined table
 for (model_name in names(cox_models)) {
   cox_model <- cox_models[[model_name]]
@@ -496,7 +499,7 @@ filtered_cox_combined_info <- filtered_cox_combined_info %>% mutate_if(is.numeri
 
 View(filtered_cox_combined_info)
 
-write.table(filtered_cox_combined_info, file = "cmr-abstract_LOGISTIC_regressions_table.tsv", sep = "\t", row.names = F)
+# write.table(filtered_cox_combined_info, file = "cmr-abstract_LOGISTIC_regressions_table.tsv", sep = "\t", row.names = F)
 ```
 
 
