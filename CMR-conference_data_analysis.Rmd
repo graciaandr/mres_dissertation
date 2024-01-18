@@ -29,7 +29,8 @@ setwd("/Users/BHCadmin/Documents/mres_gracia/")
 demographic_table <- read.csv("upd_demographics_table_UKB_data.tsv", header = T, sep = "\t")
 cmr_measures_tbl <- read.csv("CMR_patients_in_UKB.tsv", header = T, sep = "\t")
 cmr_original_df <- read.csv('cmr_measures_updated.csv', header = T, sep = ';') 
-cmr_t1_df <- read.csv('t1_qcd_evan.csv', header = T, sep = ',') %>% rename(f.eid = feid)
+cmr_t1_df <- read.csv('t1_qcd_evan.csv', header = T, sep = ',') %>% 
+  rename(f.eid = feid) %>% filter(pred_dsc >0.7)
 bsa_tbl <- read.csv("BSA_of_UKB_patients.tsv", header = T, sep = "\t")
 bmi_tbl <- read.csv("BMI_of_patients_in_UKB.tsv", sep = "\t")
 diabetes_tbl = read.csv("updated_diabetes_tbl.tsv", sep = "\t")
@@ -76,6 +77,8 @@ length(cmr_bc_rt_ids)
 
 cmr_bc_but_no_mrt <- intersect(cmr_ids, no_RT_and_BC_ids)
 length(cmr_bc_but_no_mrt)
+GLM_df <- read.table(file = "GLM_table_for_regression_models.tsv", sep = "\t")
+
 ```
 
 ## Data Preprocessing and Wrangling for summary stats
@@ -231,7 +234,7 @@ View(sum_table)
 ```{r}
 cmr_df <- full_join(cmr_measures_tbl, cmr_original_df, by = "f.eid")
 nrow(cmr_df)
-cmr_df <- full_join(cmr_df, cmr_t1_df %>% select(f.eid, t1), by = "f.eid")
+cmr_df <- full_join(cmr_df, cmr_t1_df %>% select(f.eid, t1, pred_dsc), by = "f.eid")
 nrow(cmr_df)
 cmr_df <- full_join(cmr_df, GLM_df, by = "f.eid")
 nrow(cmr_df)
@@ -269,7 +272,7 @@ summary_cmr_measures <- tableby(~ max_LV_WT + LV_mass2 + LVEDVI + LVM_LDEDV + LV
         numeric.stats=c( "median", "q1q3"), na.tableby(FALSE),
         data = test_df, )
 summary_cmr_measures <- summary(summary_cmr_measures, text = NULL, digits=2) %>% as.data.frame()
-# View(summary_cmr_measures)
+View(summary_cmr_measures)
 # write.table(summary_cmr_measures, 'summary_stats_CMR_measures-BCpatients.tsv', sep = "\t")
 # write.table(summary_cmr_measures, 'summary_stats_CMR_measures-noBCpatients-women.tsv', sep = "\t")
 # write.table(summary_cmr_measures, 'summary_stats_CMR_measures-noBCpatients-men.tsv', sep = "\t")
@@ -425,7 +428,7 @@ formula = incident_status_myocard_inf ~ BC_status +
   deprivation_index +
   prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
 model1 <- glm(formula, data = GLM_df, family = "binomial")
-summary(model1)
+# summary(model1)
 tmp <- list(model1)
 names(tmp) <- "MYOINF-Model2"
 cox_models <- c(cox_models, tmp)
@@ -610,7 +613,7 @@ formula = t1 ~ BC_status + age_at_recruitment + sex +
   mets_imaging_visit1 + 
   deprivation_index +
   prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension
-model1 <- glm(formula, data = cmr_df %>% filter(incident_status == 0))
+model1 <- glm(formula, data = cmr_df %>% filter(incident_status == 0) %>% filter(pred_dsc >0.8))
 tmp <- list(model1)
 names(tmp) <- "t1-Model"
 lin_models <- c(lin_models, tmp)
@@ -720,7 +723,7 @@ extract_model_info <- function(model, model_name) {
                                         ifelse(p_value_table < 0.05, "*", "")))
   
   # Combine the formatted p-values and significance levels with the extracted information
-  model_info$p_value <- formatted_p_values # p_value_table
+  model_info$p_value <- p_value_table
   model_info$significance <- significance_levels
   return(model_info)
 }
@@ -738,7 +741,7 @@ for (model_name in names(lin_models)) {
 # Specify the list of selected terms (predictors) to filter the combined table
 # selected_terms <- c("BC_status1", "sex", "age_at_recruitment")  # Adjust this list as needed
 # selected_terms <- c("(Intercept)", "BC_status1")  # Adjust this list as needed
-selected_terms <- c("BC_status1")  # Adjust this list as needed
+selected_terms <- c("BC_status")  # Adjust this list as needed
 
 # Filter the combined table to include only the selected terms
 filtered_combined_info <- combined_info %>%
@@ -751,33 +754,33 @@ filtered_combined_info <- filtered_combined_info %>% mutate_if(is.numeric, ~roun
 filtered_combined_info$predictor <- NULL
 View(filtered_combined_info)
 
-write.table(filtered_combined_info, file = "CMR-conference_results_lin_regressions_table.tsv", sep = "\t", row.names = F)
+# write.table(filtered_combined_info, file = "CMR-conference_results_lin_regressions_table.tsv", sep = "\t", row.names = F)
 ```
 
 
-```{r}
+<!-- ```{r} -->
 
-# BC ~ age, sex +smoking +deprivation + alcohol +IPAQ activity level + diabetes + hypertension + high cholesterol + LVEF + GLS + T1
+<!-- # BC ~ age, sex +smoking +deprivation + alcohol +IPAQ activity level + diabetes + hypertension + high cholesterol + LVEF + GLS + T1 -->
 
-formula = t1 ~ BC_status + age_at_recruitment + 
-  sex +
-  smoking_status_at_recruitment + alc_intake_at_recruitment + 
-  mets_imaging_visit1 + 
-  deprivation_index +
-  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension + 
-  LVEF + GLS
-model1 <- glm(formula, data = cmr_df)
+<!-- formula = t1 ~ BC_status + age_at_recruitment +  -->
+<!--   sex + -->
+<!--   smoking_status_at_recruitment + alc_intake_at_recruitment +  -->
+<!--   mets_imaging_visit1 +  -->
+<!--   deprivation_index + -->
+<!--   prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension +  -->
+<!--   LVEF + GLS -->
+<!-- model1 <- glm(formula, data = cmr_df) -->
 
-formula = BC_status ~ age_at_recruitment + 
-  sex +
-  smoking_status_at_recruitment + alc_intake_at_recruitment + 
-  mets_imaging_visit1 + 
-  deprivation_index +
-  prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension + 
-  LVEF + GLS + t1
-model1 <- glm(formula, data = cmr_df, family = "binomial")
-summary(model1)
-```
+<!-- formula = BC_status ~ age_at_recruitment +  -->
+<!--   sex + -->
+<!--   smoking_status_at_recruitment + alc_intake_at_recruitment +  -->
+<!--   mets_imaging_visit1 +  -->
+<!--   deprivation_index + -->
+<!--   prev_status_diabetes + prev_status_cholesterol + prev_status_hypertension +  -->
+<!--   LVEF + GLS + t1 -->
+<!-- model1 <- glm(formula, data = cmr_df, family = "binomial") -->
+<!-- summary(model1) -->
+<!-- ``` -->
 
 
 ## Plots for CMR measures regression results
@@ -786,9 +789,6 @@ summary(model1)
 
 # Load the ggplot2 library
 library(ggplot2)
-
-df_for_plots <- cmr_df %>% select(f.eid, max_LV_WT, LV_mass2, LVEDVI, LVM_LDEDV, LVSVi, LVEF, LVGFI, GLS, t1,
-                                  max_LAVi, LAEF, RVEDVi, RVSVi, RVEF, DAo, BC_status, prevalent_status)
 
 df_log_regression <- read.csv(file = "cmr-abstract_LOGISTIC_regressions_table.tsv", sep = "\t", header = T)
 df_lin_regression <- read.csv(file = "CMR-conference_results_lin_regressions_table.tsv", sep = "\t", header = T)
@@ -825,7 +825,7 @@ row_index <- which(df_lin_regression$model == "LVM_LDEDV")
 df_lin_regression$model[row_index] <- "LVM:LVEDV (g/mL)"
 
 row_index <- which(df_lin_regression$model == "LDEVDI")
-df_lin_regression$model[row_index] <- "LDEVDi (mL/m2)"
+df_lin_regression$model[row_index] <- "LVEDVi (mL/m2)"
 
 row_index <- which(df_lin_regression$model == "LVSVi")
 df_lin_regression$model[row_index] <- "LVSVi (mL/m2)"
@@ -865,7 +865,7 @@ df_lin_regression$model[row_index] <- "AoD (10-3 mmHg-1)"
 df_lin_regression$model <- factor(df_lin_regression$model, levels = rev(unique(df_lin_regression$model)))
 df_lin_regression
 
-ggplot(df_lin_regression, aes(x = model, y = coef, ymin = conf_low, ymax = conf_high)) +
+p1 <- ggplot(df_lin_regression, aes(x = model, y = coef, ymin = conf_low, ymax = conf_high)) +
   geom_linerange(aes(color = Significance)) +
   geom_point(aes(color = Significance)) +
   coord_flip() +
@@ -874,11 +874,12 @@ ggplot(df_lin_regression, aes(x = model, y = coef, ymin = conf_low, ymax = conf_
   ggtitle(" ") + theme_bw() + 
   theme(
     panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank() ) +
+    panel.grid.minor = element_blank(),
+    text = element_text(size=17)) +
   geom_hline(yintercept = 0, linetype = "44", color = "dark grey", size = 0.5)
 
 
-ggplot(df_log_regression, aes(x = model, y = coef, ymin = conf_low, ymax = conf_high)) +
+p2 <- ggplot(df_log_regression, aes(x = model, y = coef, ymin = conf_low, ymax = conf_high)) +
   geom_linerange(aes(color = Significance)) +
   geom_point(aes(color = Significance)) +
   coord_flip() +
@@ -887,7 +888,7 @@ ggplot(df_log_regression, aes(x = model, y = coef, ymin = conf_low, ymax = conf_
   ggtitle(" ") + theme_bw() + 
   theme(
     panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank() ) + 
+    panel.grid.minor = element_blank()) + 
   geom_hline(yintercept = 1, linetype = "44", color = "dark grey", size = 0.5) + ylim(0,3.5)
 
 ```
