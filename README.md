@@ -22,15 +22,11 @@ The aim of the project is to investigate associations of mediastinal radiotherap
 
   4)  Ascertain incident myocardial infarction, stroke, and heart failure using linked HES records.
 
-  5)  Run multivariable linear regression and Cox regression (select as appropriate) to examine association of each cancer treatment with a)heart MRI measures and b)incident events.
+  5)  Run multivariable linear regression and logistic regression to examine association of each cancer treatment with a)heart MRI measures and b)incident events.
 
-  6)  Write up thesis
 <br/>
 
 ### Methodology
 *	Multivariable linear regression 
-* Cox regression
-*	Competing risk regression 
-* Fine Grey regression
+*	Logistic regression 
 <br/>
-For the abovementioned steps, analytical algorithms will be developed in R, bash and/or Python piping resulting data between scripts, creating thus a seamless bioinformatics pipeline.
